@@ -58,6 +58,7 @@ class LeetCodeTrajectoryGenerator:
                 'generate_cfg': {
                     'top_p': 0.8,
                     'temperature': 0.7,
+                    # 'max_tokens': 4096,
                     'max_tokens': 2048,
                 }
             }
@@ -240,6 +241,92 @@ class LeetCodeTrajectoryGenerator:
 
     #     return prompt
 
+    # def format_problem_prompt(self, problem: Dict) -> str:
+
+    #     # question = problem.get("description", "").strip()
+    #     original_response = problem.get("original_response", "").strip()
+    #     filtered_lines = [line.strip() for line in problem.get('description', '').splitlines() if line.strip()]
+    #     question = '\n'.join(filtered_lines)
+
+    #     # Part 1
+    #     prompt = (
+    #     "You are a helpful AI assistant. Initially, when solving a question, you would need to think step by step, without the ability to use\n"
+    #     "code for calculation. Now, you have the capability to write code to use the code interpreter for calculation. The code will be\n"
+    #     "executed by a sandbox, and the result can be returned to enhance your reasoning process. You can now leverage code to enhance\n"
+    #     "your calculation while still maintaining the reasoning process.\n")
+
+    #     # Part 2
+    #     prompt += (
+    #         "The thinking process can have multiple code snippets. Each code snippet is wrapped with:\n"
+    #         "<code>\n"
+    #         "```python\n"
+    #         "code snippet\n"
+    #         "```\n"
+    #         "</code>, and should be executable. The returned result is wrapped with <interpreter> execution results \\texttt{{</interpreter>}}.\n\n"
+    #     )
+
+    #     # Part 3
+    #     # prompt += (
+    #     # "Goal:\n"
+    #     # "Modify the original thinking process to make it more accurate by replacing manual calculation steps that can benefit from code\n"
+    #     # "execution with the corresponding code snippets and their interpreter's execution results. The core reasoning logic from the original\n"
+    #     # "thinking process, including any unsuccessful attempts, should remain unchanged. You should only replace the necessary manual\n"
+    #     # "calculation steps with code and interpreter's execution results, without altering the rest tokens of the thinking process. Wrap the\n"
+    #     # "revised thinking process within <revised_thinking_process> and </revised_thinking_process>}.\n\n")
+
+    #     # Part 3: Goal
+    #     prompt += (
+    #         "Goal:\n"
+    #         "Modify the original thinking process to make it more accurate by replacing manual calculation steps that can benefit from code\n"
+    #         "execution with the corresponding code snippets and their interpreter's execution results. The core reasoning logic from the original\n"
+    #         "thinking process, including any unsuccessful attempts, should remain unchanged. You should only replace the necessary manual\n"
+    #         "calculation steps with code and interpreter's execution results, without altering the rest tokens of the thinking process. Wrap the\n"
+    #         "revised thinking process within <revised_thinking_process> and </revised_thinking_process>}}.\n\n"
+    #     )
+
+
+    #     # Part 4: User Question + Original Thinking Process placeholders
+    #     prompt += (
+    #         "User Question:\n"
+    #         "{question}\n"
+    #         "Original Thinking Process (without code interpreter’s support):\n"
+    #         "<original_thinking_process> {original_response} </original_thinking_process>\n\n"
+    #     )
+
+    #     # Part 5: Details section (extended with points 5–7)
+    #     prompt += (
+    #     "Details:\n"
+    #     "1. Identify sections where code execution could speed up the reasoning process or make the calculation more accurate.\n"
+    #     "2. Replace the manual calculation steps with code snippets and the corresponding interpreter's execution results.\n"
+    #     "3. Keep the logical flow of the reasoning process intact, including any failed exploration attempts that were part of the ini tial\n"
+    #     "process.\n"
+    #     "4. The code snippets should be complete scripts, including necessary imports, and should not contain markdown symbols like\n"
+    #     "<code>\n"
+    #     "```python\n"
+    #     "code snippet\n"
+    #     "```\n"
+    #     "</code>.\n"
+    #     "5. Outputs in the code snippets must explicitly call the print function.\n"
+    #     "6. Execution results should match the model's output exactly, with no extra or missing tokens.\n"
+    #     "7. If the Original Thinking Process does not include an <answer> section at the end, please add it in the Revised Thinking Process:\n"
+    #     "<answer>\n"
+    #     "```python\n"
+    #     "# YOUR ANSWER HERE\n"
+    #     "print('\\boxed{\\'The final answer goes here.\\'}')\n"
+    #     "```\n"
+    #     "</answer>\n\n"
+    #     )
+
+    #     # Part 6: Revised Thinking Process placeholder
+    #     prompt += "Revised Thinking Process (With code interpreter's support):\n"
+
+    #     # Replace the placeholders with actual values
+    #     # prompt = prompt.format(question=question, original_response=original_response)
+    #     prompt = f"{prompt}"
+    #     prompt = prompt.replace("{question}", question).replace("{original_response}", original_response)
+
+    #     return prompt
+
     def format_problem_prompt(self, problem: Dict) -> str:
 
         # question = problem.get("description", "").strip()
@@ -247,67 +334,60 @@ class LeetCodeTrajectoryGenerator:
         filtered_lines = [line.strip() for line in problem.get('description', '').splitlines() if line.strip()]
         question = '\n'.join(filtered_lines)
 
-        # Part 1
-        prompt = (
-        "You are a helpful AI assistant. Initially, when solving a question, you would need to think step by step, without the ability to use\n"
-        "code for calculation. Now, you have the capability to write code to use the code interpreter for calculation. The code will be\n"
-        "executed by a sandbox, and the result can be returned to enhance your reasoning process. You can now leverage code to enhance\n"
-        "your calculation while still maintaining the reasoning process.\n")
+        # system_prompt = """You are an expert problem solver who thinks step-by-step and uses executable Python code to verify your reasoning. 
+        # Your task is to take a problem and its basic solution, then enhance the thinking process by:
+        # 1. Breaking down the problem step-by-step with detailed reasoning
+        # 2. Writing executable Python code snippets to test ideas, explore the problem, and verify solutions
+        # 3. Wrapping each code snippet in <code> tags: <code>\n```python\n[your code]\n```\n</code>
+        # 4. Including multiple code blocks throughout your thinking as you explore and verify
+        # 5. Providing a final, clean solution in the output
 
-        # Part 2
-        prompt += (
-            "The thinking process can have multiple code snippets. Each code snippet is wrapped with:\n"
-            "<code>\n"
-            "```python\n"
-            "code snippet\n"
-            "```\n"
-            "</code>, and should be executable. The returned result is wrapped with <interpreter> execution results \\texttt{{</interpreter>}}.\n\n"
-        )
+        # CRITICAL FORMATTING RULES:
+        # - Each code block MUST be wrapped as: <code>\n```python\nYOUR_CODE_HERE\n```\n</code>
+        # - Code blocks can appear MULTIPLE times in your thinking (typically 2-4 times)
+        # - Each code block should be a complete, executable Python script
+        # - Include necessary imports in each code block
+        # - The thinking should flow naturally with code blocks embedded where you test ideas
 
-        # Part 3
-        # prompt += (
-        # "Goal:\n"
-        # "Modify the original thinking process to make it more accurate by replacing manual calculation steps that can benefit from code\n"
-        # "execution with the corresponding code snippets and their interpreter's execution results. The core reasoning logic from the original\n"
-        # "thinking process, including any unsuccessful attempts, should remain unchanged. You should only replace the necessary manual\n"
-        # "calculation steps with code and interpreter's execution results, without altering the rest tokens of the thinking process. Wrap the\n"
-        # "revised thinking process within <revised_thinking_process> and </revised_thinking_process>}.\n\n")
+        # Given this thinking text, solve the following problem step by step. You now have the ability to selectively write executable Python code to enhance your reasoning process. The Python code will be executed by an external sandbox, and the output can be returned to aid your reasoning and help you arrive at the final answer. The Python code should be complete scripts, including necessary imports.
+        # Each code snippet is wrapped with <code>\n```python\ncode snippet\n```\n</code> and should be executable. The returned result is wrapped with <interpreter> execution results \\texttt{{</interpreter>}}"""
 
-        # Part 3: Goal
-        prompt += (
-            "Goal:\n"
-            "Modify the original thinking process to make it more accurate by replacing manual calculation steps that can benefit from code\n"
-            "execution with the corresponding code snippets and their interpreter's execution results. The core reasoning logic from the original\n"
-            "thinking process, including any unsuccessful attempts, should remain unchanged. You should only replace the necessary manual\n"
-            "calculation steps with code and interpreter's execution results, without altering the rest tokens of the thinking process. Wrap the\n"
-            "revised thinking process within <revised_thinking_process> and </revised_thinking_process>}}.\n\n"
-        )
+        system_prompt = """You are an expert problem solver who thinks step-by-step and uses executable Python code to verify your reasoning. 
+        Your task is to take a problem and its basic solution, then enhance the thinking process by:
+        1. Breaking down the problem step-by-step with detailed reasoning
+        2. Writing executable Python code snippets to test ideas, explore the problem, and reflect on solutions
+        3. Wrapping each code snippet in <code> tags: <code>\n```python\n[your code]\n```\n</code>
+        4. Including multiple code blocks throughout your thinking as you explore and verify
+        5. Python code should be executable. The returned result is wrapped with <interpreter> execution results \\texttt{{</interpreter>}}
+        5. Providing a final, clean solution in the output
+
+        CRITICAL FORMATTING RULES:
+        - Each code block MUST be wrapped as: <code>\n```python\nYOUR_CODE_HERE\n```\n</code>
+        - Code blocks can appear MULTIPLE times in your thinking (typically 2-4 times)
+        - Each code block should be a complete, executable Python script
+        - Include necessary imports in each code block
+        - The thinking should flow naturally with code blocks embedded where you test ideas
+
+        Given this thinking text, solve the following problem step by step. You now have the ability to selectively write executable Python code to enhance your reasoning process. The Python code will be executed by an external sandbox."""
+
+    
+        # Part 1: Goal
+        prompt = system_prompt
 
 
-        # Part 4: User Question + Original Thinking Process placeholders
+        # Part 2: User Question + Original Thinking Process placeholders
         prompt += (
             "User Question:\n"
             "{question}\n"
-            "Original Thinking Process (without code interpreter’s support):\n"
+            "Original Thinking Process (without code interpreter's support):\n"
             "<original_thinking_process> {original_response} </original_thinking_process>\n\n"
         )
 
         # Part 5: Details section (extended with points 5–7)
         prompt += (
         "Details:\n"
-        "1. Identify sections where code execution could speed up the reasoning process or make the calculation more accurate.\n"
-        "2. Replace the manual calculation steps with code snippets and the corresponding interpreter's execution results.\n"
-        "3. Keep the logical flow of the reasoning process intact, including any failed exploration attempts that were part of the ini tial\n"
-        "process.\n"
-        "4. The code snippets should be complete scripts, including necessary imports, and should not contain markdown symbols like\n"
-        "<code>\n"
-        "```python\n"
-        "code snippet\n"
-        "```\n"
-        "</code>.\n"
-        "5. Outputs in the code snippets must explicitly call the print function.\n"
-        "6. Execution results should match the model's output exactly, with no extra or missing tokens.\n"
-        "7. If the Original Thinking Process does not include an <answer> section at the end, please add it in the Revised Thinking Process:\n"
+        "1. Outputs in the code snippets must explicitly call the print function.\n"
+        "2. If the Original Thinking Process does not include an <answer> section at the end, please add it in the Revised Thinking Process:\n"
         "<answer>\n"
         "```python\n"
         "# YOUR ANSWER HERE\n"
@@ -365,13 +445,7 @@ class LeetCodeTrajectoryGenerator:
             
             responses = []
             for response in self.agent.run(messages=messages):
-                responses.append(response)
-                # print("Response: ", response)
-
-            # print
-            print("Response: ", response)
-            print("Exitingg....")
-            exit(0)
+                responses.append(response)          
             
             if not responses:
                 raise Exception("No response from agent")
@@ -379,6 +453,11 @@ class LeetCodeTrajectoryGenerator:
             
             # Extract assistant's response
             assistant_response = responses[-1][-1]['content']
+
+              # print
+            print("Response: ", assistant_response)
+            print("Exitingg....")
+            exit(0)
             
             trajectory["conversation"].append({
                 "turn": 1,
