@@ -567,8 +567,9 @@ def main():
     """Main execution function"""
     
     # Configuration
-    MODEL_NAME = "Qwen/Qwen2.5-1.5B-Instruct"  # Small model for testing
+    # MODEL_NAME = "Qwen/Qwen2.5-1.5B-Instruct"  # Small model for testing
     # MODEL_NAME = "Qwen/Qwen3-1.7B"  # Small model for testing
+    MODEL_NAME = "Qwen/Qwen2.5-Coder-1.5B-Instruct"  # Small model for testing
     MAX_SAMPLES = 10  # Number of problems to process
     OUTPUT_DIR = "./leetcode_trajectories/"
     
