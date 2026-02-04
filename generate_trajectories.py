@@ -240,7 +240,8 @@ class LeetCodeTrajectoryGenerator:
     #     )
 
     #     return prompt
-
+    
+    # This version can be considered
     # def format_problem_prompt(self, problem: Dict) -> str:
 
     #     # question = problem.get("description", "").strip()
