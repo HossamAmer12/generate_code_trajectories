@@ -167,44 +167,58 @@
 #         return results
 
 
-n=5
-queries=[[2,4],[0,2],[0,4]]
-# Initial graph: 0→1→2→3→4 (path length = 4)
-from collections import deque
-def bfs_shortest_path(graph, start, end, n):
-    """Find shortest path using BFS"""
-    distances = [-1] * n
-    distances[start] = 0
-    queue = deque([start])
-    while queue:
-        node = queue.popleft()
+# n=5
+# queries=[[2,4],[0,2],[0,4]]
+# # Initial graph: 0→1→2→3→4 (path length = 4)
+# from collections import deque
+# def bfs_shortest_path(graph, start, end, n):
+#     """Find shortest path using BFS"""
+#     distances = [-1] * n
+#     distances[start] = 0
+#     queue = deque([start])
+#     while queue:
+#         node = queue.popleft()
         
-        if node == end:
-            return distances[end]
+#         if node == end:
+#             return distances[end]
         
-        for neighbor in graph[node]:
-            if distances[neighbor] == -1:
-                distances[neighbor] = distances[node] + 1
-                queue.append(neighbor)
+#         for neighbor in graph[node]:
+#             if distances[neighbor] == -1:
+#                 distances[neighbor] = distances[node] + 1
+#                 queue.append(neighbor)
 
-    return distances[end]
+#     return distances[end]
 
-n = 5
-graph = {i: [] for i in range(n)}
+# n = 5
+# graph = {i: [] for i in range(n)}
 
-for i in range(n - 1):
-    graph[i].append(i + 1)
-    print("Initial graph:", graph)
-    print("Initial shortest path from 0 to 4:", bfs_shortest_path(graph, 0, n-1, n))
+# for i in range(n - 1):
+#     graph[i].append(i + 1)
+#     print("Initial graph:", graph)
+#     print("Initial shortest path from 0 to 4:", bfs_shortest_path(graph, 0, n-1, n))
 
-graph[2].append(4)
-print("\nAfter adding 2→4:")
-print("Shortest path:", bfs_shortest_path(graph, 0, n-1, n))
+# graph[2].append(4)
+# print("\nAfter adding 2→4:")
+# print("Shortest path:", bfs_shortest_path(graph, 0, n-1, n))
 
-graph[0].append(2)
-print("\nAfter adding 0→2:")
-print("Shortest path:", bfs_shortest_path(graph, 0, n-1, n))
+# graph[0].append(2)
+# print("\nAfter adding 0→2:")
+# print("Shortest path:", bfs_shortest_path(graph, 0, n-1, n))
 
-graph[0].append(4)
-print("\nAfter adding 0→4:")
-print("Shortest path:", bfs_shortest_path(graph, 0, n-1, n))
+# graph[0].append(4)
+# print("\nAfter adding 0→4:")
+# print("Shortest path:", bfs_shortest_path(graph, 0, n-1, n))
+
+
+# Case when the longest_common_prefix is already defined above *****
+# Complete solution testing
+# test_cases = [
+#     (["flower", "flow", "flight"], "fl"),
+#     (["dog", "racecar", "car"], ""),
+#     (["interspecies", "interstellar", "interstate"], "inters")
+# ]
+
+# for strs, expected in test_cases:
+#     result = longest_common_prefix(strs)
+#     assert result == expected, f"Expected {expected}, but got {result} for input {strs}"
+#     print(f"Test passed for input {strs}: {result}")

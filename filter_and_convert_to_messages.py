@@ -573,7 +573,7 @@ def process_trajectories(
                 
             try:
                 trajectory = json.loads(line)
-                global_stats['total_problems'] += 1
+                
                 
                 # Get original problem data if available
                 problem_title = trajectory.get('problem_title', '')
@@ -588,6 +588,9 @@ def process_trajectories(
                 num_calls = stats.get('num_tool_calls', 0)
                 if num_calls > MAX_TOOL_CALLS:
                     continue
+                
+                # Update total problems to be total problems processed
+                global_stats['total_problems'] += 1
 
                 # Update statistics
                 stats = messages_data.get('stats', {})
@@ -746,7 +749,7 @@ def main():
     # Configuration
     INPUT_FILE = "./leetcode_trajectories/test_trajectories.jsonl"  # Can be .json or .jsonl
     OUTPUT_DIR = "./processed_trajectories/"
-    MAX_SAMPLES = 10
+    MAX_SAMPLES = 20
     MAX_TOOL_CALLS = 4
     
     print("="*60)
