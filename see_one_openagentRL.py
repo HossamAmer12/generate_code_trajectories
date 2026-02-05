@@ -7,6 +7,7 @@ import json
 input_file = './processed_trajectories/trajectories_messages.jsonl'
 output_file = './processed_trajectories/one_example.json'
 
+# Set an example index
 example_index = 0
 
 try:
