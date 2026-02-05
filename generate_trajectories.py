@@ -119,7 +119,8 @@ class LeetCodeTrajectoryGenerator:
                 # Now correctly maps newfacade/LeetCodeDataset fields:
                 problem = {
                     "id": item.get("question_id") or item.get("task_id"),
-                    "title": f"LeetCode {item.get('question_id', 'Unknown')}",
+                    # "title": f"LeetCode {item.get('question_id', 'Unknown')}",
+                    "title": f"{item.get('task_id', 'Unknown')}",
                     "difficulty": item.get("difficulty", "Unknown"),
                     "description": item.get("problem_description", ""),  # ← was "description"
                     "starter_code": item.get("starter_code", ""),        # ← NEW
@@ -335,12 +336,33 @@ class LeetCodeTrajectoryGenerator:
         filtered_lines = [line.strip() for line in problem.get('description', '').splitlines() if line.strip()]
         question = '\n'.join(filtered_lines)
 
+        system_prompt = """You are an expert problem solver who thinks step-by-step and uses executable Python code to verify your reasoning. 
+        Your task is to take a problem and its basic solution, then enhance the thinking process by:
+        1. Breaking down the problem step-by-step with detailed reasoning
+        2. Writing executable Python code snippets to test ideas, explore the problem, and verify solutions
+        3. Wrapping each code snippet in <code> tags: <code>\n```python\n[your code]\n```\n</code>
+        4. Including multiple code blocks throughout your thinking as you explore and verify
+        5. Providing a final, clean solution in the output
+        6. If you write test cases in your solution, mention that you will do test cases.
+        7. Your own test and edge cases are in Python script and wrap them up in <code> tags: <code>\n```python\n[your code]\n```\n</code>.
+
+        CRITICAL FORMATTING RULES:
+        - Each code block MUST be wrapped as: <code>\n```python\nYOUR_CODE_HERE\n```\n</code>
+        - Code blocks can appear MULTIPLE times in your thinking (typically 2-4 times)
+        - Each code block should be a complete, executable Python script
+        - Include necessary imports in each code block
+        - The thinking should flow naturally with code blocks embedded where you test ideas
+
+        Given this thinking text, solve the following problem step by step. You now have the ability to selectively write executable Python code to enhance your reasoning process. The Python code will be executed by an external sandbox, and the output can be returned to aid your reasoning and help you arrive at the final answer. The Python code should be complete scripts, including necessary imports.
+        Each code snippet is wrapped with <code>\n```python\ncode snippet\n```\n</code> and should be executable. The returned result is wrapped with <interpreter> execution results \\texttt{{</interpreter>}}"""
+
         # system_prompt = """You are an expert problem solver who thinks step-by-step and uses executable Python code to verify your reasoning. 
         # Your task is to take a problem and its basic solution, then enhance the thinking process by:
         # 1. Breaking down the problem step-by-step with detailed reasoning
         # 2. Writing executable Python code snippets to test ideas, explore the problem, and verify solutions
         # 3. Wrapping each code snippet in <code> tags: <code>\n```python\n[your code]\n```\n</code>
         # 4. Including multiple code blocks throughout your thinking as you explore and verify
+        # 5. Python code should be executable. The returned result is wrapped with <interpreter> execution results \\texttt{{</interpreter>}}
         # 5. Providing a final, clean solution in the output
 
         # CRITICAL FORMATTING RULES:
@@ -350,26 +372,7 @@ class LeetCodeTrajectoryGenerator:
         # - Include necessary imports in each code block
         # - The thinking should flow naturally with code blocks embedded where you test ideas
 
-        # Given this thinking text, solve the following problem step by step. You now have the ability to selectively write executable Python code to enhance your reasoning process. The Python code will be executed by an external sandbox, and the output can be returned to aid your reasoning and help you arrive at the final answer. The Python code should be complete scripts, including necessary imports.
-        # Each code snippet is wrapped with <code>\n```python\ncode snippet\n```\n</code> and should be executable. The returned result is wrapped with <interpreter> execution results \\texttt{{</interpreter>}}"""
-
-        system_prompt = """You are an expert problem solver who thinks step-by-step and uses executable Python code to verify your reasoning. 
-        Your task is to take a problem and its basic solution, then enhance the thinking process by:
-        1. Breaking down the problem step-by-step with detailed reasoning
-        2. Writing executable Python code snippets to test ideas, explore the problem, and reflect on solutions
-        3. Wrapping each code snippet in <code> tags: <code>\n```python\n[your code]\n```\n</code>
-        4. Including multiple code blocks throughout your thinking as you explore and verify
-        5. Python code should be executable. The returned result is wrapped with <interpreter> execution results \\texttt{{</interpreter>}}
-        5. Providing a final, clean solution in the output
-
-        CRITICAL FORMATTING RULES:
-        - Each code block MUST be wrapped as: <code>\n```python\nYOUR_CODE_HERE\n```\n</code>
-        - Code blocks can appear MULTIPLE times in your thinking (typically 2-4 times)
-        - Each code block should be a complete, executable Python script
-        - Include necessary imports in each code block
-        - The thinking should flow naturally with code blocks embedded where you test ideas
-
-        Given this thinking text, solve the following problem step by step. You now have the ability to selectively write executable Python code to enhance your reasoning process. The Python code will be executed by an external sandbox."""
+        # Given this thinking text, solve the following problem step by step. You now have the ability to selectively write executable Python code to enhance your reasoning process. The Python code will be executed by an external sandbox."""
 
     
         # Part 1: Goal
@@ -437,72 +440,37 @@ class LeetCodeTrajectoryGenerator:
         # Initial prompt
         initial_prompt = self.format_problem_prompt(problem)
 
-        print(initial_prompt)
+        # print(initial_prompt)
 
         try:
             # Turn 1: Get initial solution
-            print("[Turn 1] Generating initial solution...")
+            # print("[Turn 1] Generating initial solution...")
             messages = [{'role': 'user', 'content': initial_prompt}]
             
             responses = []
             for response in self.agent.run(messages=messages):
                 responses.append(response)          
             
-            if not responses:
-                raise Exception("No response from agent")
-            
             
             # Extract assistant's response
             assistant_response = responses[-1][-1]['content']
 
-              # print
-            print("Response: ", assistant_response)
-            print("Exitingg....")
-            exit(0)
-            
-            trajectory["conversation"].append({
-                "turn": 1,
-                "role": "user",
-                "content": initial_prompt
-            })
-            trajectory["conversation"].append({
-                "turn": 1,
-                "role": "assistant",
-                "content": assistant_response
-            })
-            
-            print(f"Response length: {len(assistant_response)} chars")
-            
-            # Turn 2: Ask for optimization
-            print("[Turn 2] Requesting optimization...")
-            follow_up = """Great! Now please:
-1. Optimize this solution if possible
-2. Provide detailed time and space complexity analysis
-3. Suggest any alternative approaches"""
-            
-            messages.append({'role': 'assistant', 'content': assistant_response})
-            messages.append({'role': 'user', 'content': follow_up})
-            
-            responses = []
-            for response in self.agent.run(messages=messages):
-                responses.append(response)
-            
-            if responses:
-                refined_response = responses[-1][-1]['content']
+            if assistant_response:
                 trajectory["conversation"].append({
-                    "turn": 2,
+                    "turn": 1,
                     "role": "user",
-                    "content": follow_up
+                    "content": initial_prompt
                 })
                 trajectory["conversation"].append({
-                    "turn": 2,
+                    "turn": 1,
                     "role": "assistant",
-                    "content": refined_response
+                    "content": assistant_response
                 })
-                trajectory["final_solution"] = refined_response
-                trajectory["success"] = True
+
+                trajectory["final_solution"] = current_python_code
                 
-                print(f"Optimization length: {len(refined_response)} chars")
+                print(f"Response length: {len(assistant_response)} chars")
+                trajectory["success"] = True
             else:
                 trajectory["final_solution"] = assistant_response
                 trajectory["success"] = True
@@ -512,6 +480,7 @@ class LeetCodeTrajectoryGenerator:
         except Exception as e:
             print(f"✗ Error generating trajectory: {e}")
             trajectory["error"] = str(e)
+            trajectory["success"] = False
         
         return trajectory
     
@@ -570,7 +539,8 @@ def main():
     # MODEL_NAME = "Qwen/Qwen2.5-1.5B-Instruct"  # Small model for testing
     # MODEL_NAME = "Qwen/Qwen3-1.7B"  # Small model for testing
     MODEL_NAME = "Qwen/Qwen2.5-Coder-1.5B-Instruct"  # Small model for testing
-    MAX_SAMPLES = 10  # Number of problems to process
+    # MAX_SAMPLES = 10  # Number of problems to process
+    MAX_SAMPLES = 5  # Number of problems to process
     OUTPUT_DIR = "./leetcode_trajectories/"
     
     # Create output directory
