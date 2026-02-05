@@ -8,7 +8,7 @@ input_file = './processed_trajectories/trajectories_messages.jsonl'
 output_file = './processed_trajectories/one_example.json'
 
 # Set an example index
-example_index = 2
+example_index = 4
 
 try:
     with open(input_file, 'r', encoding='utf-8') as f:
@@ -66,6 +66,6 @@ print("Tools defined:")
 tools = data.get("tools", [])
 print(tools)
 
-print(f"--- Conversation Summary ---")
+print(f"--- Conversation Summary Index#{example_index} ---")
 print(f"Total Messages: {len(messages)}")
 print(f"Total Total calls: {num_tool_calls}")
