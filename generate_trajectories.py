@@ -51,12 +51,16 @@ CODE_BLOCK_RE = re.compile(
 )
 
 
-def log_execution(code, output, log_file = "code_exec.txt"):
+def log_execution(pre_text, code, output, log_file = "code_exec.txt"):
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     with open(log_file, "a", encoding="utf-8") as f:
         f.write("=" * 60 + "\n")
         f.write(f"[{timestamp}] Executed Code Block\n")
         f.write("-" * 60 + "\n")
+        if pre_text:
+            f.write("PREVIOUS TEXT (before code block):\n")
+            f.write(pre_text + "\n")
+            f.write("-" * 60 + "\n")
         f.write("CODE:\n")
         f.write("```python\n")
         f.write(code + "\n")
@@ -65,13 +69,17 @@ def log_execution(code, output, log_file = "code_exec.txt"):
         f.write(output + "\n")
         f.write("=" * 60 + "\n\n")
 
-def execute_code_blocks(text, timeout=5):
+def execute_code_blocks(text, timeout=5, context_chars=1024):
     """
     Finds <code> blocks, executes them, and injects <interpreter> output.
     """
     def run_block(match):
         generated_code = textwrap.dedent(match.group(1)).strip()
         print("Executing raw code:\n", generated_code)
+
+        # Extract context before this code block
+        start_index = match.start()
+        pre_text = text[max(0, start_index - context_chars):start_index].strip()
 
         try:
             # 🔥 send `code` to sandbox here
@@ -90,7 +98,7 @@ def execute_code_blocks(text, timeout=5):
         
         # debug
         # 🔒 Log code + output together
-        log_execution(generated_code, output)
+        log_execution(pre_text, generated_code, output)
 
         return match.group(0) + f"\n<interpreter>\n{output}\n</interpreter>\n"
         
