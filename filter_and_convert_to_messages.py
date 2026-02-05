@@ -374,6 +374,7 @@ def convert_trajectory_to_messages(trajectory: Dict, original_problem: Dict = No
         'cur_diff': original_problem['difficulty']
     }
     
+   
 
     # Process conversation turns
     for turn_idx, turn_data in enumerate(trajectory.get("conversation", [])):
@@ -422,7 +423,27 @@ def convert_trajectory_to_messages(trajectory: Dict, original_problem: Dict = No
                 
             tool_calls = []
             output_tool_calls = []
-            for chunk in chunks:
+
+            is_last_turn = (turn_idx == len(trajectory.get("conversation", [])) - 1)
+            # Get the final solution
+            final_solution = original_problem.get("final_solution", "")
+            if is_last_turn and final_solution:
+                final_code = final_solution.strip()
+                final_code = "\n# Final code implementation\n" + final_code
+                # final_code = "\n# BIEN BIEN\n" + final_code
+
+            for idx, chunk in enumerate(chunks):
+                
+                # Prepare the assistant text
+                text_content = chunk["text"] or ""
+
+                print("Hossam is_last_turn: ", is_last_turn, idx == len(chunks) - 1, len(final_code))
+                # If this is the last chunk in the last turn, append the final solution
+                if is_last_turn and idx == len(chunks) - 1 and final_code:
+                    text_content += final_code
+                    print("Hossam appended text content")
+                    print(text_content)
+
                 if chunk["text"] and chunk["code"]:
                     current_tool_call = {"function": {
                             "arguments": {"code": chunk["code"]},
@@ -430,7 +451,7 @@ def convert_trajectory_to_messages(trajectory: Dict, original_problem: Dict = No
                     tool_calls.append(current_tool_call)
                     messages.append({
                         "role": "assistant",
-                        "content": chunk["text"],
+                        "content": text_content,
                         "tool_calls": [current_tool_call]
                     })
 
@@ -453,7 +474,7 @@ def convert_trajectory_to_messages(trajectory: Dict, original_problem: Dict = No
                 elif chunk["text"]:
                     messages.append({
                         "role": "assistant",
-                        "content": chunk["text"],
+                        "content": text_content,
                         "tool_calls": None
                     })
                     
@@ -506,11 +527,18 @@ def load_original_problems(dataset_name: str = "newfacade/LeetCodeDataset",
         problems_lookup = {}
         for item in list(dataset)[:max_samples]:
             task_id = item.get('task_id', '')
+
+            match = re.search(r"```python\s*(.*?)\s*```", item["response"], re.DOTALL)
+            # current_python_code = match.group(1) if match else None
+            # Keep the python languague
+            current_python_code = match.group(0) if match else None
+            current_python_code = current_python_code.strip()
             problems_lookup[task_id] = {
                 'original_response': item.get('response', ''),
                 'description': item.get('problem_description', ''),
                 'task_id': task_id,
-                'difficulty': item.get('difficulty', '')
+                'difficulty': item.get('difficulty', ''),
+                'final_solution': current_python_code
             }
         
         print(f"Loaded {len(problems_lookup)} original problems for lookup")
@@ -585,6 +613,7 @@ def process_trajectories(
                 # Get original problem data if available
                 problem_title = trajectory.get('problem_title', '')
                 original_problem = original_problems.get(problem_title, {})
+                
                 
                 # Convert to messages format
                 messages_data = convert_trajectory_to_messages(trajectory, original_problem)
@@ -768,7 +797,7 @@ def main():
     # Configuration
     INPUT_FILE = "./leetcode_trajectories/test_trajectories.jsonl"  # Can be .json or .jsonl
     OUTPUT_DIR = "./processed_trajectories/"
-    MAX_SAMPLES = 200
+    MAX_SAMPLES = 1
     MAX_TOOL_CALLS = 4
     
     print("="*60)
