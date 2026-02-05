@@ -6,6 +6,6 @@ python filter_and_convert_to_messages.py
 
 
 # Merge
-python merge_paruet.py 
+python merge_parquet.py 
 
 
