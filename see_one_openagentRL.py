@@ -39,7 +39,7 @@ messages = data.get("messages", [])
 print(f"--- Conversation Summary ---")
 print(f"Total Messages: {len(messages)}")
 print("-" * 30)
-
+num_tool_calls = 0
 # 3. Iterate and print details for each message
 for i, msg in enumerate(messages):
     role = msg.get("role", "Unknown").upper()
@@ -53,6 +53,7 @@ for i, msg in enumerate(messages):
         has_tool_calls = False
     else:
         has_tool_calls = True
+        num_tool_calls = num_tool_calls +  1
     
     print(f"Message #{i}")
     print(f"  Role   : {role}")
@@ -64,3 +65,7 @@ for i, msg in enumerate(messages):
 print("Tools defined:")
 tools = data.get("tools", [])
 print(tools)
+
+print(f"--- Conversation Summary ---")
+print(f"Total Messages: {len(messages)}")
+print(f"Total Total calls: {num_tool_calls}")

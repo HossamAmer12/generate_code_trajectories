@@ -289,7 +289,7 @@ CODE_BLOCK_RE = re.compile(
     re.DOTALL
 )
 
-def split_by_python_code_blocks(content: str) -> list[dict]:
+def split_by_python_code_blocks(content: str, stats: Dict) -> list[dict]:
     chunks = []
     pos = 0
 
@@ -298,6 +298,29 @@ def split_by_python_code_blocks(content: str) -> list[dict]:
         code = match.group(1).strip()
         output = match.group(2)
         output = output.strip() if output is not None else None
+
+        # Fix empty interpreter outputs if code looks like output
+        if output is None or output == "":
+            # Simple heuristic to guess if code block is actually output
+            if code and (
+                len(code) < 100 or 
+                re.match(r'^\[.*\]$', code) or
+                re.match(r'^-?\d+(\.\d+)?$', code) or
+                re.match(r'^(True|False|None)$', code)
+            ):
+                output = code
+                stats['num_fixes'] += 1
+        
+        error_outputs = check_for_errors(output)
+        if error_outputs:
+            stats['has_errors'] = True
+            stats['num_error_outputs'] += 1
+            # Error recovery:
+            # print(f"  ⚠️  Using original response due to errors in: {trajectory.get('problem_title')}")
+            #     fixed_content = original_problem['original_response']
+            #     all_code_blocks = extract_code_blocks(fixed_content)
+            #     interpreter_outputs = extract_interpreter_outputs(fixed_content)
+            #     stats['used_original_response'] = True
 
         # Text before this code block
         text = content[pos:start].strip()
@@ -319,7 +342,7 @@ def split_by_python_code_blocks(content: str) -> list[dict]:
             "output": None
         })
 
-    return chunks
+    return chunks, stats, error_outputs
 
 
 def convert_trajectory_to_messages(trajectory: Dict, original_problem: Dict = None) -> Dict:
@@ -387,9 +410,10 @@ def convert_trajectory_to_messages(trajectory: Dict, original_problem: Dict = No
             
 
             # split_by_python_code_blocks
-            chunks = split_by_python_code_blocks(fixed_content)
-
+            chunks, stats, error_outputs = split_by_python_code_blocks(fixed_content, stats)
+                
             tool_calls = []
+            output_tool_calls = []
             for chunk in chunks:
                 if chunk["text"] and chunk["code"]:
                     current_tool_call = {"function": {
@@ -416,6 +440,8 @@ def convert_trajectory_to_messages(trajectory: Dict, original_problem: Dict = No
                         "tool_calls": None
                     })
 
+                    output_tool_calls.append(formatted_result)
+
                 elif chunk["text"]:
                     messages.append({
                         "role": "assistant",
@@ -423,36 +449,10 @@ def convert_trajectory_to_messages(trajectory: Dict, original_problem: Dict = No
                         "tool_calls": None
                     })
                     
-            # Extract interpreter outputs
-            interpreter_outputs = extract_interpreter_outputs(fixed_content)
-            
-            # Check for errors
-            error_outputs = check_for_errors(interpreter_outputs)
-            if error_outputs:
-                stats['has_errors'] = True
-                stats['num_error_outputs'] = len(error_outputs)
-            
-            # Count empty outputs
-            empty_outputs = sum(1 for output in interpreter_outputs if not output.strip())
-            stats['num_empty_outputs'] = empty_outputs
-            
-            # If there are errors and we have original response, use it instead
-            # if stats['has_errors'] and original_problem and original_problem.get('original_response'):
-            #     print(f"  ⚠️  Using original response due to errors in: {trajectory.get('problem_title')}")
-            #     fixed_content = original_problem['original_response']
-            #     all_code_blocks = extract_code_blocks(fixed_content)
-            #     interpreter_outputs = extract_interpreter_outputs(fixed_content)
-            #     stats['used_original_response'] = True
             
             stats['num_tool_calls'] = len(tool_calls)
-            stats['num_tool_results'] = len(interpreter_outputs)
-            
-            # Remove code blocks and interpreter outputs from content for clean display
-            clean_content = re.sub(r'<code>\s*```python\s*.*?```\s*</code>', '', fixed_content, flags=re.DOTALL)
-            clean_content = re.sub(r'```python\s*.*?```', '', clean_content, flags=re.DOTALL)
-            clean_content = re.sub(r'<interpreter>\s*.*?\s*</interpreter>', '', clean_content, flags=re.DOTALL)
-            clean_content = clean_content.strip()
-            
+            stats['num_tool_results'] = len(output_tool_calls)
+        
            
     # Define the tools structure
     tools = [{
