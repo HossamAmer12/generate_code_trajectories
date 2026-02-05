@@ -157,6 +157,7 @@ class LeetCodeTrajectoryGenerator:
             for item in list(dataset)[:max_samples]:
                 # Normalize the problem format
                 # Now correctly maps newfacade/LeetCodeDataset fields:
+
                 problem = {
                     "id": item.get("question_id") or item.get("task_id"),
                     # "title": f"LeetCode {item.get('question_id', 'Unknown')}",
@@ -168,6 +169,7 @@ class LeetCodeTrajectoryGenerator:
                     "testcases": item.get("input_output", []),
                     "original_response": item.get('response', 'Unknown')
                 }
+
 
                 if problem['original_response'] == "Unknown":
                     continue
@@ -369,84 +371,263 @@ class LeetCodeTrajectoryGenerator:
 
     #     return prompt
 
-    def format_problem_prompt(self, problem: Dict) -> str:
+    # def format_problem_prompt(self, problem: Dict) -> str:
 
-        # question = problem.get("description", "").strip()
-        original_response = problem.get("original_response", "").strip()
-        filtered_lines = [line.strip() for line in problem.get('description', '').splitlines() if line.strip()]
-        question = '\n'.join(filtered_lines)
+    #     # question = problem.get("description", "").strip()
+    #     original_response = problem.get("original_response", "").strip()
+    #     filtered_lines = [line.strip() for line in problem.get('description', '').splitlines() if line.strip()]
+    #     question = '\n'.join(filtered_lines)
 
-        system_prompt = """You are an expert problem solver who thinks step-by-step and uses executable Python code to verify your reasoning. 
-        Your task is to take a problem and its basic solution, then enhance the thinking process by:
-        1. Breaking down the problem step-by-step with detailed reasoning
-        2. Writing executable Python code snippets to test ideas, explore the problem, and verify solutions
-        3. Wrapping each code snippet in <code> tags: <code>\n```python\n[your code]\n```\n</code>
-        4. Including multiple code blocks throughout your thinking as you explore and verify
-        5. Providing a final, clean solution in the output
-        6. If you write test cases in your solution, mention that you will do test cases.
-        7. Your own test and edge cases are in Python script and wrap them up in <code> tags: <code>\n```python\n[your code]\n```\n</code>.
+    #     system_prompt = """You are an expert problem solver who thinks step-by-step and uses executable Python code to verify your reasoning. 
+    #     Your task is to take a problem and its basic solution, then enhance the thinking process by:
+    #     1. Breaking down the problem step-by-step with detailed reasoning
+    #     2. Writing executable Python code snippets to test ideas, explore the problem, and verify solutions
+    #     3. Wrapping each code snippet in <code> tags: <code>\n```python\n[your code]\n```\n</code>
+    #     4. Including multiple code blocks throughout your thinking as you explore and verify
+    #     5. Providing a final, clean solution in the output
+    #     6. If you write test cases in your solution, mention that you will do test cases.
+    #     7. Your own test and edge cases are in Python script and wrap them up in <code> tags: <code>\n```python\n[your code]\n```\n</code>.
 
-        CRITICAL FORMATTING RULES:
-        - Each code block MUST be wrapped as: <code>\n```python\nYOUR_CODE_HERE\n```\n</code>
-        - Code blocks can appear MULTIPLE times in your thinking (typically 2-4 times)
-        - Each code block should be a complete, executable Python script
-        - Include necessary imports in each code block
-        - The thinking should flow naturally with code blocks embedded where you test ideas
+    #     CRITICAL FORMATTING RULES:
+    #     - Each code block MUST be wrapped as: <code>\n```python\nYOUR_CODE_HERE\n```\n</code>
+    #     - Code blocks can appear MULTIPLE times in your thinking (typically 2-4 times)
+    #     - Each code block should be a complete, executable Python script
+    #     - Include necessary imports in each code block
+    #     - The thinking should flow naturally with code blocks embedded where you test ideas
 
-        Given this thinking text, solve the following problem step by step. You now have the ability to selectively write executable Python code to enhance your reasoning process. The Python code will be executed by an external sandbox, and the output can be returned to aid your reasoning and help you arrive at the final answer. The Python code should be complete scripts, including necessary imports.
-        Each code snippet is wrapped with <code>\n```python\ncode snippet\n```\n</code> and should be executable. The returned result is wrapped with <interpreter> execution results \\texttt{{</interpreter>}}"""
+    #     Given this thinking text, solve the following problem step by step. You now have the ability to selectively write executable Python code to enhance your reasoning process. The Python code will be executed by an external sandbox, and the output can be returned to aid your reasoning and help you arrive at the final answer. The Python code should be complete scripts, including necessary imports.
+    #     Each code snippet is wrapped with <code>\n```python\ncode snippet\n```\n</code> and should be executable. The returned result is wrapped with <interpreter> execution results \\texttt{{</interpreter>}}"""
 
-        # system_prompt = """You are an expert problem solver who thinks step-by-step and uses executable Python code to verify your reasoning. 
-        # Your task is to take a problem and its basic solution, then enhance the thinking process by:
-        # 1. Breaking down the problem step-by-step with detailed reasoning
-        # 2. Writing executable Python code snippets to test ideas, explore the problem, and verify solutions
-        # 3. Wrapping each code snippet in <code> tags: <code>\n```python\n[your code]\n```\n</code>
-        # 4. Including multiple code blocks throughout your thinking as you explore and verify
-        # 5. Python code should be executable. The returned result is wrapped with <interpreter> execution results \\texttt{{</interpreter>}}
-        # 5. Providing a final, clean solution in the output
+    #     # system_prompt = """You are an expert problem solver who thinks step-by-step and uses executable Python code to verify your reasoning. 
+    #     # Your task is to take a problem and its basic solution, then enhance the thinking process by:
+    #     # 1. Breaking down the problem step-by-step with detailed reasoning
+    #     # 2. Writing executable Python code snippets to test ideas, explore the problem, and verify solutions
+    #     # 3. Wrapping each code snippet in <code> tags: <code>\n```python\n[your code]\n```\n</code>
+    #     # 4. Including multiple code blocks throughout your thinking as you explore and verify
+    #     # 5. Python code should be executable. The returned result is wrapped with <interpreter> execution results \\texttt{{</interpreter>}}
+    #     # 5. Providing a final, clean solution in the output
 
-        # CRITICAL FORMATTING RULES:
-        # - Each code block MUST be wrapped as: <code>\n```python\nYOUR_CODE_HERE\n```\n</code>
-        # - Code blocks can appear MULTIPLE times in your thinking (typically 2-4 times)
-        # - Each code block should be a complete, executable Python script
-        # - Include necessary imports in each code block
-        # - The thinking should flow naturally with code blocks embedded where you test ideas
+    #     # CRITICAL FORMATTING RULES:
+    #     # - Each code block MUST be wrapped as: <code>\n```python\nYOUR_CODE_HERE\n```\n</code>
+    #     # - Code blocks can appear MULTIPLE times in your thinking (typically 2-4 times)
+    #     # - Each code block should be a complete, executable Python script
+    #     # - Include necessary imports in each code block
+    #     # - The thinking should flow naturally with code blocks embedded where you test ideas
 
-        # Given this thinking text, solve the following problem step by step. You now have the ability to selectively write executable Python code to enhance your reasoning process. The Python code will be executed by an external sandbox."""
+    #     # Given this thinking text, solve the following problem step by step. You now have the ability to selectively write executable Python code to enhance your reasoning process. The Python code will be executed by an external sandbox."""
 
     
-        # Part 1: Goal
+    #     # Part 1: Goal
+    #     prompt = system_prompt
+
+
+    #     # Part 2: User Question + Original Thinking Process placeholders
+    #     prompt += (
+    #         "User Question:\n"
+    #         "{question}\n"
+    #         "Original Thinking Process (without code interpreter's support):\n"
+    #         "<original_thinking_process> {original_response} </original_thinking_process>\n\n"
+    #     )
+
+    #     # Part 5: Details section (extended with points 5–7)
+    #     prompt += (
+    #     "Details:\n"
+    #     "1. Outputs in the code snippets must explicitly call the print function.\n"
+    #     "2. If the Original Thinking Process does not include an <answer> section at the end, please add it in the Revised Thinking Process:\n"
+    #     "<answer>\n"
+    #     "```python\n"
+    #     "# YOUR ANSWER HERE\n"
+    #     "print('\\boxed{\\'The final answer goes here.\\'}')\n"
+    #     "```\n"
+    #     "</answer>\n\n"
+    #     )
+
+    #     # Part 6: Revised Thinking Process placeholder
+    #     prompt += "Revised Thinking Process (With code interpreter's support):\n"
+
+    #     # Replace the placeholders with actual values
+    #     # prompt = prompt.format(question=question, original_response=original_response)
+    #     prompt = f"{prompt}"
+    #     prompt = prompt.replace("{question}", question).replace("{original_response}", original_response)
+
+    #     return prompt
+
+    def format_problem_prompt(self, problem: Dict) -> str:
+        """
+        Format a problem into a prompt that encourages step-by-step thinking
+        with executable code verification.
+        
+        Args:
+            problem: Dictionary containing:
+                - description: Problem statement
+                - original_response: Initial solution attempt (optional)
+        
+        Returns:
+            Formatted prompt string
+        """
+        # Clean up the problem description
+        filtered_lines = [
+            line.strip() 
+            for line in problem.get('description', '').splitlines() 
+            if line.strip()
+        ]
+        question = '\n'.join(filtered_lines)
+        original_response = problem.get("original_response", "").strip()
+
+        system_prompt = """You are an expert problem solver who uses step-by-step reasoning enhanced by executable Python code.
+
+    YOUR TASK:
+    Solve the problem using a thinking-first approach where you:
+    1. Reason through the problem step-by-step in natural language
+    2. Write small Python code snippets (2-4 throughout your solution) to TEST and VERIFY your ideas
+    3. Use code to explore edge cases, validate assumptions, and confirm your reasoning
+    4. Provide a final, complete solution at the end
+
+    CRITICAL WORKFLOW:
+    - Start by breaking down the problem conceptually (no code yet)
+    - As you develop ideas, write code snippets to TEST them
+    - After each code block, interpret the results and continue reasoning
+    - Build toward the final solution incrementally
+
+    CODE FORMATTING RULES:
+    - Wrap each code snippet as: <code>\n```python\nYOUR_CODE_HERE\n```\n</code>
+    - Each code block should be COMPLETE and EXECUTABLE (include imports)
+    - Use print() for all outputs you want to see
+    - Code blocks should appear 2-4 times during your thinking process
+    - Execution results will be wrapped in <interpreter> tags
+
+    WHEN TO USE CODE:
+    ✓ Testing a small example to understand the problem
+    ✓ Verifying an algorithm idea works correctly
+    ✓ Checking edge cases or special conditions
+    ✓ Validating intermediate steps in your reasoning
+    ✓ Exploring different approaches with simple tests
+    ✗ NOT as your first step - think first!
+    ✗ NOT to replace reasoning - code should verify it
+
+    STRUCTURE YOUR RESPONSE LIKE THIS:
+
+    1. **Understanding the Problem**
+    - Explain what the problem is asking in your own words
+    - Identify key constraints and requirements
+    - Note any edge cases to consider
+
+    2. **Initial Approach**
+    - Describe your first idea for solving the problem
+    - Explain the intuition behind this approach
+
+    3. **Testing the Idea** (CODE BLOCK 1)
+    <code>
+    ```python
+    # Test with a simple example to verify the approach
+    # Include print statements to see results
+    ```
+    </code>
+
+    4. **Analysis of Results**
+    - What did the test reveal?
+    - Does the approach work? Any issues?
+    - What adjustments are needed?
+
+    5. **Refined Approach**
+    - Update your strategy based on testing
+    - Address any issues discovered
+
+    6. **Edge Case Verification** (CODE BLOCK 2)
+    <code>
+    ```python
+    # Test edge cases and special conditions
+    # Verify the refined approach handles all scenarios
+    ```
+    </code>
+
+    7. **Final Solution Development**
+    - Explain the complete algorithm
+    - Walk through the implementation logic
+
+    8. **Solution Testing** (CODE BLOCK 3-4)
+    <code>
+    ```python
+    # Implement and test the final solution
+    # Run against provided examples
+    ```
+    </code>
+
+    9. **Final Answer**
+    <answer>
+    ```python
+    # Complete, clean solution
+    def solution():
+        # Implementation
+        pass
+
+    # Test cases
+    print('\\boxed{"Final Answer"}')
+    ```
+    </answer>
+
+    IMPORTANT NOTES:
+    - The code interpreter will execute your Python code in a sandbox environment
+    - Results will be returned wrapped in <interpreter> execution results </interpreter> tags
+    - Always include necessary imports in each code block
+    - Make each code block self-contained and executable
+    - Use descriptive print statements to understand what's happening
+    """
+
         prompt = system_prompt
+        
+        # Add the user's question and context
+        prompt += f"""
 
+    USER QUESTION:
+    {question}
+    """
 
-        # Part 2: User Question + Original Thinking Process placeholders
-        prompt += (
-            "User Question:\n"
-            "{question}\n"
-            "Original Thinking Process (without code interpreter's support):\n"
-            "<original_thinking_process> {original_response} </original_thinking_process>\n\n"
-        )
+        # Add original thinking process if available
+        if original_response:
+            prompt += f"""
+    ORIGINAL THINKING PROCESS (without code support):
+    <original_thinking_process>
+    {original_response}
+    </original_thinking_process>
+    """
 
-        # Part 5: Details section (extended with points 5–7)
-        prompt += (
-        "Details:\n"
-        "1. Outputs in the code snippets must explicitly call the print function.\n"
-        "2. If the Original Thinking Process does not include an <answer> section at the end, please add it in the Revised Thinking Process:\n"
-        "<answer>\n"
-        "```python\n"
-        "# YOUR ANSWER HERE\n"
-        "print('\\boxed{\\'The final answer goes here.\\'}')\n"
-        "```\n"
-        "</answer>\n\n"
-        )
+        # Add specific instructions
+        prompt += """
+    DETAILED INSTRUCTIONS:
 
-        # Part 6: Revised Thinking Process placeholder
-        prompt += "Revised Thinking Process (With code interpreter's support):\n"
+    1. **Start with Understanding**: Begin by explaining the problem in your own words before writing any code.
 
-        # Replace the placeholders with actual values
-        # prompt = prompt.format(question=question, original_response=original_response)
-        prompt = f"{prompt}"
-        prompt = prompt.replace("{question}", question).replace("{original_response}", original_response)
+    2. **Use Code Strategically**: Include 2-4 code blocks throughout your thinking process:
+    - First code block: Test basic understanding with a simple example
+    - Middle code blocks: Verify your approach, test edge cases, explore alternatives
+    - Final code block: Implement and test the complete solution
+
+    3. **Outputs**: All code outputs must explicitly use print() statements to be visible.
+
+    4. **Incremental Building**: Don't jump straight to the final solution. Build up your understanding through testing.
+
+    5. **Analysis**: After each code execution, analyze what you learned and how it affects your approach.
+
+    6. **Final Answer Format**: Always end with an <answer> section containing your final, complete solution:
+
+    <answer>
+    ```python
+    # Your final solution here
+    def solve_problem():
+    # Complete implementation
+    pass
+
+    # Test with examples
+    # Include test cases to verify correctness
+    print('\\boxed{"Your Final Answer"}')
+    ```
+    </answer>
+
+    Now, solve the problem step by step with code verification:
+
+    REVISED THINKING PROCESS (with code interpreter support):
+    """
 
         return prompt
 
@@ -498,7 +679,7 @@ class LeetCodeTrajectoryGenerator:
             # Execute code blocks
             assistant_response = execute_code_blocks(assistant_response)
 
-            print("Hossam after exectution", assistant_response)
+            # print("Hossam after exectution", assistant_response)
 
             if assistant_response:
                 trajectory["conversation"].append({
@@ -552,7 +733,19 @@ class LeetCodeTrajectoryGenerator:
             print(f"Problem {i}/{len(problems)}")
             print(f"{'#'*60}")
             
-            trajectory = self.generate_trajectory(problem)
+            # debug
+            if problem["title"] != "shortest-distance-after-road-addition-queries-ii":
+                trajectory = {
+                "problem_id": problem.get("id", "unknown"),
+                "problem_title": problem["title"],
+                "difficulty": problem.get("difficulty", "Unknown"),
+                "conversation": [],
+                # "final_solution": current_python_code,
+                "success": False
+            }
+            else:
+                trajectory = self.generate_trajectory(problem)
+
             trajectories.append(trajectory)
             
             # Save incrementally
@@ -585,7 +778,8 @@ def main():
     # MODEL_NAME = "Qwen/Qwen3-1.7B"  # Small model for testing
     MODEL_NAME = "Qwen/Qwen2.5-Coder-1.5B-Instruct"  # Small model for testing
     # MAX_SAMPLES = 10  # Number of problems to process
-    MAX_SAMPLES = 5  # Number of problems to process
+    # MAX_SAMPLES = 5  # Number of problems to process
+    MAX_SAMPLES = 2  # Number of problems to process
     OUTPUT_DIR = "./leetcode_trajectories/"
     
     # Create output directory
