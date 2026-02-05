@@ -211,10 +211,25 @@ def convert_trajectory_to_messages(trajectory: Dict, original_problem: Dict = No
             clean_content = clean_content.strip()
             
             # If this is the last assistant turn, add the final solution
-            is_last_turn = (turn_idx == len(trajectory.get("conversation", [])) - 1)
-            if is_last_turn and trajectory.get("final_solution"):
-                final_solution = trajectory.get("final_solution", "")
-                clean_content += f"\n\nHere's the final solution:\n\n```python\n{final_solution}\n```"
+            # is_last_turn = (turn_idx == len(trajectory.get("conversation", [])) - 1)
+            # if is_last_turn and trajectory.get("final_solution"):
+            #     final_solution = trajectory.get("final_solution", "")
+            #     clean_content += f"\n\nHere's the final solution:\n\n```python\n{final_solution}\n```"
+
+            # If this is the last assistant turn, add final_solution as a tool call
+            # is_last_turn = (turn_idx == len(trajectory.get("conversation", [])) - 1)
+            # if is_last_turn and trajectory.get("final_solution"):
+            #     final_code = trajectory.get("final_solution", "").strip()
+            #     final_code = "# Final solution\n" + final_code
+
+            #     if final_code:
+            #         tool_calls.append({
+            #             "function": {
+            #                 "arguments": {"code": final_code},
+            #                 "name": "code_interpreter"
+            #             },
+            #             "type": "function"
+            #         })
             
             # Add assistant message with tool calls
             messages.append({
@@ -227,9 +242,9 @@ def convert_trajectory_to_messages(trajectory: Dict, original_problem: Dict = No
             for output in interpreter_outputs:
                 # Format the result to match expected structure
                 if output.strip():
-                    formatted_result = f"execute_result:\n\n```\n{output}\n```"
+                    formatted_result = f"stdout:\n\n```\n{output}\n```"
                 else:
-                    formatted_result = "execute_result:\n\n```\n\n```"
+                    formatted_result = "stdout:\n\n```\n\n```"
                 
                 messages.append({
                     "content": formatted_result,
