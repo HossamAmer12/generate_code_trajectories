@@ -509,6 +509,7 @@ def main():
     print("="*60)
     print(f"Input: {INPUT_FILE}")
     print(f"Output: {OUTPUT_DIR}")
+    print(f"Max samples: {MAX_SAMPLES}")
     print("="*60)
     
     # Check if input file exists
