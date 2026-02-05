@@ -75,7 +75,7 @@ def execute_code_blocks(text, timeout=5, context_chars=1024):
     """
     def run_block(match):
         generated_code = textwrap.dedent(match.group(1)).strip()
-        print("Executing raw code:\n", generated_code)
+        # print("Executing raw code:\n", generated_code)
 
         # Extract context before this code block
         start_index = match.start()
@@ -102,7 +102,7 @@ def execute_code_blocks(text, timeout=5, context_chars=1024):
 
         return match.group(0) + f"\n<interpreter>\n{output}\n</interpreter>\n"
         
-    print("****************************Blocks: ")
+    # print("****************************Blocks: ")
     return CODE_BLOCK_RE.sub(run_block, text)
 
 class LeetCodeTrajectoryGenerator:
@@ -481,6 +481,423 @@ class LeetCodeTrajectoryGenerator:
 
     #     return prompt
 
+    # def format_problem_prompt(self, problem: Dict) -> str:
+    #     """
+    #     Format a problem into a prompt that encourages step-by-step thinking
+    #     with executable code verification.
+        
+    #     Args:
+    #         problem: Dictionary containing:
+    #             - description: Problem statement
+    #             - original_response: Initial solution attempt (optional)
+        
+    #     Returns:
+    #         Formatted prompt string
+    #     """
+    #     # Clean up the problem description
+    #     filtered_lines = [
+    #         line.strip() 
+    #         for line in problem.get('description', '').splitlines() 
+    #         if line.strip()
+    #     ]
+    #     question = '\n'.join(filtered_lines)
+    #     original_response = problem.get("original_response", "").strip()
+
+    #     system_prompt = """You are an expert problem solver who uses step-by-step reasoning enhanced by executable Python code.
+
+    # YOUR TASK:
+    # Solve the problem using a thinking-first approach where you:
+    # 1. Reason through the problem step-by-step in natural language
+    # 2. Write small Python code snippets (2-4 throughout your solution) to TEST and VERIFY your ideas
+    # 3. Use code to explore edge cases, validate assumptions, and confirm your reasoning
+    # 4. Provide a final, complete solution at the end
+
+    # CRITICAL WORKFLOW:
+    # - Start by breaking down the problem conceptually (no code yet)
+    # - As you develop ideas, write code snippets to TEST them
+    # - After each code block, interpret the results and continue reasoning
+    # - Build toward the final solution incrementally
+
+    # CODE FORMATTING RULES:
+    # - Wrap each code snippet as: <code>\n```python\nYOUR_CODE_HERE\n```\n</code>
+    # - Each code block should be COMPLETE and EXECUTABLE (include imports)
+    # - Use print() for all outputs you want to see
+    # - Include all necessary imports and define all variables.
+    # - Code blocks should appear 2-4 times during your thinking process
+    # - Execution results will be wrapped in <interpreter> tags
+
+    # WHEN TO USE CODE:
+    # ✓ Testing a small example to understand the problem
+    # ✓ Verifying an algorithm idea works correctly
+    # ✓ Checking edge cases or special conditions
+    # ✓ Validating intermediate steps in your reasoning
+    # ✓ Exploring different approaches with simple tests
+    # ✗ NOT as your first step - think first!
+    # ✗ NOT to replace reasoning - code should verify it
+
+    # STRUCTURE YOUR RESPONSE LIKE THIS:
+
+    # 1. **Understanding the Problem**
+    # - Explain what the problem is asking in your own words
+    # - Identify key constraints and requirements
+    # - Note any edge cases to consider
+
+    # 2. **Initial Approach**
+    # - Describe your first idea for solving the problem
+    # - Explain the intuition behind this approach
+
+    # 3. **Testing the Idea** (CODE BLOCK 1)
+    # <code>
+    # ```python
+    # # Test with a simple example to verify the approach
+    # # Include print statements to see results
+    # ```
+    # </code>
+
+    # 4. **Analysis of Results**
+    # - What did the test reveal?
+    # - Does the approach work? Any issues?
+    # - What adjustments are needed?
+
+    # 5. **Refined Approach**
+    # - Update your strategy based on testing
+    # - Address any issues discovered
+
+    # 6. **Edge Case Verification** (CODE BLOCK 2)
+    # <code>
+    # ```python
+    # # Test edge cases and special conditions
+    # # Verify the refined approach handles all scenarios
+    # ```
+    # </code>
+
+    # 7. **Final Solution Development**
+    # - Explain the complete algorithm
+    # - Walk through the implementation logic
+
+    # 8. **Solution Testing** (CODE BLOCK 3-4)
+    # <code>
+    # ```python
+    # # Implement and test the final solution
+    # # Run against provided examples
+    # ```
+    # </code>
+
+    # 9. **Final Answer**
+    # <answer>
+    # ```python
+    # # Complete, clean solution
+    # def solution():
+    #     # Implementation
+    #     pass
+
+    # # Test cases
+    # print('\\boxed{"Final Answer"}')
+    # ```
+    # </answer>
+
+    # IMPORTANT NOTES:
+    # - The code interpreter will execute your Python code in a sandbox environment
+    # - Results will be returned wrapped in <interpreter> execution results </interpreter> tags
+    # - Always include necessary imports in each code block
+    # - Make each code block self-contained and executable
+    # - Use descriptive print statements to understand what's happening
+    # """
+
+    #     prompt = system_prompt
+        
+    #     # Add the user's question and context
+    #     prompt += f"""
+
+    # USER QUESTION:
+    # {question}
+    # """
+
+    #     # Add original thinking process if available
+    #     if original_response:
+    #         prompt += f"""
+    # ORIGINAL THINKING PROCESS (without code support):
+    # <original_thinking_process>
+    # {original_response}
+    # </original_thinking_process>
+    # """
+
+    #     # Add specific instructions
+    #     prompt += """
+    # DETAILED INSTRUCTIONS:
+
+    # 1. **Start with Understanding**: Begin by explaining the problem in your own words before writing any code.
+
+    # 2. **Use Code Strategically**: Include 2-4 code blocks throughout your thinking process:
+    # - First code block: Test basic understanding with a simple example
+    # - Middle code blocks: Verify your approach, test edge cases, explore alternatives
+    # - Final code block: Implement and test the complete solution
+
+    # 3. **Outputs**: All code outputs must explicitly use print() statements to be visible.
+
+    # 4. **Incremental Building**: Don't jump straight to the final solution. Build up your understanding through testing.
+
+    # 5. **Analysis**: After each code execution, analyze what you learned and how it affects your approach.
+
+    # 6. **Final Answer Format**: Always end with an <answer> section containing your final, complete solution:
+
+    # <answer>
+    # ```python
+    # # Your final solution here
+    # def solve_problem():
+    # # Complete implementation
+    # pass
+
+    # # Test with examples
+    # # Include test cases to verify correctness
+    # print('\\boxed{"Your Final Answer"}')
+    # ```
+    # </answer>
+
+    # Now, solve the problem step by step with code verification:
+
+    # REVISED THINKING PROCESS (with code interpreter support):
+    # """
+
+    #     return prompt
+
+#     def format_problem_prompt(self, problem: Dict) -> str:
+#         """
+#         Format a problem into a prompt that encourages step-by-step thinking
+#         with executable code verification.
+        
+#         Args:
+#             problem: Dictionary containing:
+#                 - description: Problem statement
+#                 - original_response: Initial solution attempt (optional)
+        
+#         Returns:
+#             Formatted prompt string
+#         """
+#         # Clean up the problem description
+#         filtered_lines = [
+#             line.strip() 
+#             for line in problem.get('description', '').splitlines() 
+#             if line.strip()
+#         ]
+#         question = '\n'.join(filtered_lines)
+#         original_response = problem.get("original_response", "").strip()
+
+#         system_prompt = """You are an expert problem solver who uses step-by-step reasoning enhanced by executable Python code.
+
+# YOUR TASK:
+# Solve the problem using a thinking-first approach where you:
+# 1. Reason through the problem step-by-step in natural language
+# 2. Write small Python code snippets (2-4 throughout your solution) to TEST and VERIFY your ideas
+# 3. Use code to explore edge cases, validate assumptions, and confirm your reasoning
+# 4. Provide a final, complete solution at the end
+
+# CRITICAL WORKFLOW:
+# - Start by breaking down the problem conceptually (no code yet)
+# - As you develop ideas, write code snippets to TEST them
+# - After each code block, interpret the results and continue reasoning
+# - Build toward the final solution incrementally
+
+# CODE FORMATTING RULES:
+# - Wrap each code snippet as: <code>\n```python\nYOUR_CODE_HERE\n```\n</code>
+# - Each code block MUST be SELF-CONTAINED and EXECUTABLE:
+#   * Include ALL necessary imports at the top of EVERY code block
+#   * Define ALL variables and data needed within the code block
+#   * Don't reference variables from previous code blocks - redefine them if needed
+#   * Test data, input examples, and helper functions must be included in each block
+# - Use print() for all outputs you want to see
+# - Code blocks should appear 2-4 times during your thinking process
+# - Execution results will be wrapped in <interpreter> tags
+
+# CRITICAL: Each code block runs independently in a fresh environment. You MUST include:
+# ✓ All imports (e.g., import heapq, from collections import defaultdict)
+# ✓ All variable definitions (e.g., test_input = [...])
+# ✓ All helper functions used in that block
+# ✗ Never assume variables from previous blocks exist
+
+# WHEN TO USE CODE:
+# ✓ Testing a small example to understand the problem
+# ✓ Verifying an algorithm idea works correctly
+# ✓ Checking edge cases or special conditions
+# ✓ Validating intermediate steps in your reasoning
+# ✓ Exploring different approaches with simple tests
+# ✗ NOT as your first step - think first!
+# ✗ NOT to replace reasoning - code should verify it
+
+# STRUCTURE YOUR RESPONSE LIKE THIS:
+
+# 1. **Understanding the Problem**
+#    - Explain what the problem is asking in your own words
+#    - Identify key constraints and requirements
+#    - Note any edge cases to consider
+
+# 2. **Initial Approach**
+#    - Describe your first idea for solving the problem
+#    - Explain the intuition behind this approach
+
+# 3. **Testing the Idea** (CODE BLOCK 1)
+#    <code>
+#    ```python
+#    # IMPORTANT: Include ALL imports and variable definitions
+#    # This code block must run independently
+   
+#    # Example:
+#    # import math
+#    # test_input = [1, 2, 3]
+   
+#    # Test with a simple example to verify the approach
+#    # Include print statements to see results
+#    ```
+#    </code>
+
+# 4. **Analysis of Results**
+#    - What did the test reveal?
+#    - Does the approach work? Any issues?
+#    - What adjustments are needed?
+
+# 5. **Refined Approach**
+#    - Update your strategy based on testing
+#    - Address any issues discovered
+
+# 6. **Edge Case Verification** (CODE BLOCK 2)
+#    <code>
+#    ```python
+#    # IMPORTANT: This is a new code block - include ALL imports and definitions again
+#    # Don't assume anything from the previous code block exists
+   
+#    # Test edge cases and special conditions
+#    # Verify the refined approach handles all scenarios
+#    ```
+#    </code>
+
+# 7. **Final Solution Development**
+#    - Explain the complete algorithm
+#    - Walk through the implementation logic
+
+# 8. **Solution Testing** (CODE BLOCK 3-4)
+#    <code>
+#    ```python
+#    # IMPORTANT: Fresh code block - redefine everything needed
+#    # Include: imports, helper functions, test data
+   
+#    # Implement and test the final solution
+#    # Run against provided examples
+#    ```
+#    </code>
+
+# 9. **Final Answer**
+#    <answer>
+#    ```python
+#    # Complete, clean solution
+#    def solution():
+#        # Implementation
+#        pass
+   
+#    # Test cases
+#    print('\\boxed{"Final Answer"}')
+#    ```
+#    </answer>
+
+# IMPORTANT NOTES:
+# - The code interpreter will execute your Python code in a sandbox environment
+# - Results will be returned wrapped in <interpreter> execution results </interpreter> tags
+# - Always include necessary imports in each code block
+# - Make each code block self-contained and executable
+# - Use descriptive print statements to understand what's happening
+# """
+
+#         prompt = system_prompt
+        
+#         # Add the user's question and context
+#         prompt += f"""
+
+# USER QUESTION:
+# {question}
+# """
+
+#         # Add original thinking process if available
+#         if original_response:
+#             prompt += f"""
+# ORIGINAL THINKING PROCESS (without code support):
+# <original_thinking_process>
+# {original_response}
+# </original_thinking_process>
+# """
+
+#         # Add specific instructions
+#         prompt += """
+# DETAILED INSTRUCTIONS:
+
+# 1. **Start with Understanding**: Begin by explaining the problem in your own words before writing any code.
+
+# 2. **Use Code Strategically**: Include 2-4 code blocks throughout your thinking process:
+#    - First code block: Test basic understanding with a simple example
+#    - Middle code blocks: Verify your approach, test edge cases, explore alternatives
+#    - Final code block: Implement and test the complete solution
+
+# 3. **Self-Contained Code Blocks** (CRITICAL):
+#    - Each code block runs in a FRESH, INDEPENDENT environment
+#    - ALWAYS include at the start of each code block:
+#      * ALL imports needed (import math, from collections import deque, etc.)
+#      * ALL test data/input variables
+#      * ALL helper functions that will be called
+#    - Example of a proper code block:
+#      ```python
+#      # Correct - Self-contained
+#      import heapq
+#      from collections import defaultdict
+     
+#      def helper_func(x):
+#          return x * 2
+     
+#      test_data = [1, 2, 3]
+#      result = helper_func(test_data[0])
+#      print(result)
+#      ```
+#    - Example of WRONG code block:
+#      ```python
+#      # WRONG - Missing imports and assumes 'test_data' exists from before
+#      result = helper_func(test_data[0])  # ERROR: helper_func and test_data undefined!
+#      print(result)
+#      ```
+
+# 4. **Outputs**: All code outputs must explicitly use print() statements to be visible.
+
+# 5. **Incremental Building**: Don't jump straight to the final solution. Build up your understanding through testing.
+
+# 6. **Analysis**: After each code execution, analyze what you learned and how it affects your approach.
+
+# 6. **Final Answer Format**: Always end with an <answer> section containing your final, complete solution:
+
+# <answer>
+# ```python
+# # Your final solution here
+# def solve_problem():
+#     # Complete implementation
+#     pass
+
+# # Test with examples
+# # Include test cases to verify correctness
+# print('\\boxed{"Your Final Answer"}')
+# ```
+# </answer>
+
+# CRITICAL REMINDERS:
+# - Every code block is executed independently - include ALL imports and variable definitions
+# - If you need data from the problem, redefine it in each code block
+# - Common mistakes to avoid:
+#   * Forgetting imports like 'import heapq', 'from collections import defaultdict'
+#   * Using variables defined in previous code blocks (they won't exist!)
+#   * Calling functions not defined in the current code block
+
+# Now, solve the problem step by step with code verification:
+
+# REVISED THINKING PROCESS (with code interpreter support):
+# """
+
+#         return prompt
+
+
     def format_problem_prompt(self, problem: Dict) -> str:
         """
         Format a problem into a prompt that encourages step-by-step thinking
@@ -505,161 +922,195 @@ class LeetCodeTrajectoryGenerator:
 
         system_prompt = """You are an expert problem solver who uses step-by-step reasoning enhanced by executable Python code.
 
-    YOUR TASK:
-    Solve the problem using a thinking-first approach where you:
-    1. Reason through the problem step-by-step in natural language
-    2. Write small Python code snippets (2-4 throughout your solution) to TEST and VERIFY your ideas
-    3. Use code to explore edge cases, validate assumptions, and confirm your reasoning
-    4. Provide a final, complete solution at the end
+YOUR TASK:
+Solve the problem using a thinking-first approach where you:
+1. Reason through the problem step-by-step in natural language
+2. Write small Python code snippets (2-4 throughout your solution) to TEST and VERIFY your ideas
+3. Use code to explore edge cases, validate assumptions, and confirm your reasoning
+4. Provide a final, complete solution at the end
 
-    CRITICAL WORKFLOW:
-    - Start by breaking down the problem conceptually (no code yet)
-    - As you develop ideas, write code snippets to TEST them
-    - After each code block, interpret the results and continue reasoning
-    - Build toward the final solution incrementally
+CRITICAL WORKFLOW:
+- Start by breaking down the problem conceptually (no code yet)
+- As you develop ideas, write code snippets to TEST them
+- After each code block, interpret the results and continue reasoning
+- Build toward the final solution incrementally
 
-    CODE FORMATTING RULES:
-    - Wrap each code snippet as: <code>\n```python\nYOUR_CODE_HERE\n```\n</code>
-    - Each code block should be COMPLETE and EXECUTABLE (include imports)
-    - Use print() for all outputs you want to see
-    - Include all necessary imports and define all variables.
-    - Code blocks should appear 2-4 times during your thinking process
-    - Execution results will be wrapped in <interpreter> tags
+CODE FORMATTING RULES:
+- Wrap each code snippet as: <code>\n```python\nYOUR_CODE_HERE\n```\n</code>
+- Each code block MUST be SELF-CONTAINED and EXECUTABLE:
+  * Include ALL necessary imports at the top of EVERY code block
+  * Define ALL variables and data needed within the code block
+  * Don't reference variables from previous code blocks - redefine them if needed
+  * Test data, input examples, and helper functions must be included in each block
+- Use print() for all outputs you want to see
+- Code blocks should appear 2-4 times during your thinking process
+- Execution results will be wrapped in <interpreter> tags
 
-    WHEN TO USE CODE:
-    ✓ Testing a small example to understand the problem
-    ✓ Verifying an algorithm idea works correctly
-    ✓ Checking edge cases or special conditions
-    ✓ Validating intermediate steps in your reasoning
-    ✓ Exploring different approaches with simple tests
-    ✗ NOT as your first step - think first!
-    ✗ NOT to replace reasoning - code should verify it
+CRITICAL: Each code block runs independently in a fresh environment. You MUST include:
+✓ All imports (e.g., import heapq, from collections import defaultdict)
+✓ All variable definitions (e.g., test_input = [...])
+✓ All helper functions used in that block
+✗ Never assume variables from previous blocks exist
 
-    STRUCTURE YOUR RESPONSE LIKE THIS:
+WHEN TO USE CODE:
+✓ Testing a small example to understand the problem
+✓ Verifying an algorithm idea works correctly
+✓ Checking edge cases or special conditions
+✓ Validating intermediate steps in your reasoning
+✓ Exploring different approaches with simple tests
+✗ NOT as your first step - think first!
+✗ NOT to replace reasoning - code should verify it
 
-    1. **Understanding the Problem**
-    - Explain what the problem is asking in your own words
-    - Identify key constraints and requirements
-    - Note any edge cases to consider
+STRUCTURE YOUR RESPONSE LIKE THIS:
 
-    2. **Initial Approach**
-    - Describe your first idea for solving the problem
-    - Explain the intuition behind this approach
+1. **Understanding the Problem**
+   - Explain what the problem is asking in your own words
+   - Identify key constraints and requirements
+   - Note any edge cases to consider
 
-    3. **Testing the Idea** (CODE BLOCK 1)
-    <code>
-    ```python
-    # Test with a simple example to verify the approach
-    # Include print statements to see results
-    ```
-    </code>
+2. **Initial Approach**
+   - Describe your first idea for solving the problem
+   - Explain the intuition behind this approach
 
-    4. **Analysis of Results**
-    - What did the test reveal?
-    - Does the approach work? Any issues?
-    - What adjustments are needed?
+3. **Testing the Idea** (CODE BLOCK 1)
+   <code>
+   ```python
+   # IMPORTANT: Include ALL imports and variable definitions
+   # This code block must run independently
+   
+   # Example:
+   # import math
+   # test_input = [1, 2, 3]
+   
+   # Test with a simple example to verify the approach
+   # Include print statements to see results
+   ```
+   </code>
 
-    5. **Refined Approach**
-    - Update your strategy based on testing
-    - Address any issues discovered
+4. **Analysis of Results**
+   - What did the test reveal?
+   - Does the approach work? Any issues?
+   - What adjustments are needed?
 
-    6. **Edge Case Verification** (CODE BLOCK 2)
-    <code>
-    ```python
-    # Test edge cases and special conditions
-    # Verify the refined approach handles all scenarios
-    ```
-    </code>
+5. **Refined Approach**
+   - Update your strategy based on testing
+   - Address any issues discovered
 
-    7. **Final Solution Development**
-    - Explain the complete algorithm
-    - Walk through the implementation logic
+6. **Edge Case Verification** (CODE BLOCK 2)
+   <code>
+   ```python
+   # IMPORTANT: This is a new code block - include ALL imports and definitions again
+   # Don't assume anything from the previous code block exists
+   
+   # Test edge cases and special conditions
+   # Verify the refined approach handles all scenarios
+   ```
+   </code>
 
-    8. **Solution Testing** (CODE BLOCK 3-4)
-    <code>
-    ```python
-    # Implement and test the final solution
-    # Run against provided examples
-    ```
-    </code>
+7. **Final Solution Development**
+   - Explain the complete algorithm
+   - Walk through the implementation logic
 
-    9. **Final Answer**
-    <answer>
-    ```python
-    # Complete, clean solution
-    def solution():
-        # Implementation
-        pass
+8. **Solution Testing** (CODE BLOCK 3-4)
+   <code>
+   ```python
+   # IMPORTANT: Fresh code block - redefine everything needed
+   # Include: imports, helper functions, test data
+   
+   # Implement and test the final solution
+   # Run against provided examples
+   ```
+   </code>
 
-    # Test cases
-    print('\\boxed{"Final Answer"}')
-    ```
-    </answer>
+9. **Conclusion**
+   - Summarize your findings
+   - Confirm the approach works for all cases
+   - Note any important insights or edge cases discovered
 
-    IMPORTANT NOTES:
-    - The code interpreter will execute your Python code in a sandbox environment
-    - Results will be returned wrapped in <interpreter> execution results </interpreter> tags
-    - Always include necessary imports in each code block
-    - Make each code block self-contained and executable
-    - Use descriptive print statements to understand what's happening
-    """
+IMPORTANT NOTES:
+- The code interpreter will execute your Python code in a sandbox environment
+- Results will be returned wrapped in <interpreter> execution results </interpreter> tags
+- Always include necessary imports in each code block
+- Make each code block self-contained and executable
+- Use descriptive print statements to understand what's happening
+"""
 
         prompt = system_prompt
         
         # Add the user's question and context
         prompt += f"""
 
-    USER QUESTION:
-    {question}
-    """
+USER QUESTION:
+{question}
+"""
 
         # Add original thinking process if available
         if original_response:
             prompt += f"""
-    ORIGINAL THINKING PROCESS (without code support):
-    <original_thinking_process>
-    {original_response}
-    </original_thinking_process>
-    """
+ORIGINAL THINKING PROCESS (without code support):
+<original_thinking_process>
+{original_response}
+</original_thinking_process>
+"""
 
         # Add specific instructions
         prompt += """
-    DETAILED INSTRUCTIONS:
+DETAILED INSTRUCTIONS:
 
-    1. **Start with Understanding**: Begin by explaining the problem in your own words before writing any code.
+1. **Start with Understanding**: Begin by explaining the problem in your own words before writing any code.
 
-    2. **Use Code Strategically**: Include 2-4 code blocks throughout your thinking process:
-    - First code block: Test basic understanding with a simple example
-    - Middle code blocks: Verify your approach, test edge cases, explore alternatives
-    - Final code block: Implement and test the complete solution
+2. **Use Code Strategically**: Include 2-4 code blocks throughout your thinking process:
+   - First code block: Test basic understanding with a simple example
+   - Middle code blocks: Verify your approach, test edge cases, explore alternatives
+   - Final code block: Implement and test the complete solution
 
-    3. **Outputs**: All code outputs must explicitly use print() statements to be visible.
+3. **Self-Contained Code Blocks** (CRITICAL):
+   - Each code block runs in a FRESH, INDEPENDENT environment
+   - ALWAYS include at the start of each code block:
+     * ALL imports needed (import math, from collections import deque, etc.)
+     * ALL test data/input variables
+     * ALL helper functions that will be called
+   - Example of a proper code block:
+     ```python
+     # Correct - Self-contained
+     import heapq
+     from collections import defaultdict
+     
+     def helper_func(x):
+         return x * 2
+     
+     test_data = [1, 2, 3]
+     result = helper_func(test_data[0])
+     print(result)
+     ```
+   - Example of WRONG code block:
+     ```python
+     # WRONG - Missing imports and assumes 'test_data' exists from before
+     result = helper_func(test_data[0])  # ERROR: helper_func and test_data undefined!
+     print(result)
+     ```
 
-    4. **Incremental Building**: Don't jump straight to the final solution. Build up your understanding through testing.
+4. **Outputs**: All code outputs must explicitly use print() statements to be visible.
 
-    5. **Analysis**: After each code execution, analyze what you learned and how it affects your approach.
+5. **Incremental Building**: Build up your understanding through testing and verification.
 
-    6. **Final Answer Format**: Always end with an <answer> section containing your final, complete solution:
+6. **Analysis**: After each code execution, analyze what you learned and how it affects your approach.
 
-    <answer>
-    ```python
-    # Your final solution here
-    def solve_problem():
-    # Complete implementation
-    pass
+CRITICAL REMINDERS:
+- Every code block is executed independently - include ALL imports and variable definitions
+- If you need data from the problem, redefine it in each code block
+- Common mistakes to avoid:
+  * Forgetting imports like 'import heapq', 'from collections import defaultdict'
+  * Using variables defined in previous code blocks (they won't exist!)
+  * Calling functions not defined in the current code block
 
-    # Test with examples
-    # Include test cases to verify correctness
-    print('\\boxed{"Your Final Answer"}')
-    ```
-    </answer>
+Now, solve the problem step by step with code verification:
 
-    Now, solve the problem step by step with code verification:
-
-    REVISED THINKING PROCESS (with code interpreter support):
-    """
+REVISED THINKING PROCESS (with code interpreter support):
+"""
 
         return prompt
+
 
 
     def generate_trajectory(self, problem: Dict) -> Dict:
@@ -691,7 +1142,8 @@ class LeetCodeTrajectoryGenerator:
         # Initial prompt
         initial_prompt = self.format_problem_prompt(problem)
 
-        # print(initial_prompt)
+        # debug
+        print(initial_prompt)
 
         try:
             # Turn 1: Get initial solution
@@ -708,6 +1160,11 @@ class LeetCodeTrajectoryGenerator:
 
             # Execute code blocks
             assistant_response = execute_code_blocks(assistant_response)
+
+
+            # debug
+            print("**************** HM RESPONSE")
+            print(assistant_response)
 
             # print("Hossam after exectution", assistant_response)
 
@@ -815,6 +1272,10 @@ def main():
     MAX_SAMPLES = 2  # Number of problems to process
     OUTPUT_DIR = "./leetcode_trajectories/"
     
+    # clear the log file
+    with open("code_exec.txt", "w") as f:
+        pass
+
     # Create output directory
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     
