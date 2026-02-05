@@ -437,12 +437,12 @@ def convert_trajectory_to_messages(trajectory: Dict, original_problem: Dict = No
                 # Prepare the assistant text
                 text_content = chunk["text"] or ""
 
-                print("Hossam is_last_turn: ", is_last_turn, idx == len(chunks) - 1, len(final_code))
+                # print("Hossam is_last_turn: ", is_last_turn, idx == len(chunks) - 1, len(final_code))
                 # If this is the last chunk in the last turn, append the final solution
                 if is_last_turn and idx == len(chunks) - 1 and final_code:
                     text_content += final_code
-                    print("Hossam appended text content")
-                    print(text_content)
+                    # print("Hossam appended text content")
+                    # print(text_content)
 
                 if chunk["text"] and chunk["code"]:
                     current_tool_call = {"function": {
