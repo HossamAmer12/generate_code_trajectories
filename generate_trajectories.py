@@ -1269,7 +1269,9 @@ def main():
     MODEL_NAME = "Qwen/Qwen2.5-Coder-1.5B-Instruct"  # Small model for testing
     # MAX_SAMPLES = 10  # Number of problems to process
     # MAX_SAMPLES = 5  # Number of problems to process
-    MAX_SAMPLES = 2  # Number of problems to process
+    # MAX_SAMPLES = 2  # Number of problems to process
+
+    MAX_SAMPLES = 1500
     OUTPUT_DIR = "./leetcode_trajectories/"
     
     # clear the log file
@@ -1296,7 +1298,7 @@ def main():
     
     # Load LeetCode test split
     print("\nLoading LeetCode dataset (test split)...")
-    problems = generator.load_leetcode_dataset(split="test", max_samples=MAX_SAMPLES)
+    problems = generator.load_leetcode_dataset(split="train", max_samples=MAX_SAMPLES)
     print(f"Loaded {len(problems)} problems")
     
     # Show first problem as example

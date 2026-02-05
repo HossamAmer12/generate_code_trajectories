@@ -122,7 +122,7 @@ def convert_trajectory_to_messages(trajectory: Dict, original_problem: Dict = No
             # problem_description = original_problem.get("description", "") if original_problem else ""
 
             # normalize the white spaces
-            problem_title = normalize_whitespace(trajectory.get("problem_title", ""))
+            problem_title       = normalize_whitespace(trajectory.get("problem_title", ""))
             problem_description = normalize_whitespace(original_problem.get("description", "") if original_problem else "")
             
             # If we don't have the original description, try to extract from content
