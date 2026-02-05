@@ -14,6 +14,17 @@ from typing import List, Dict, Tuple
 import pandas as pd
 from collections import defaultdict
 
+def normalize_whitespace(text: str) -> str:
+    """Replace problematic Unicode whitespace with ASCII spaces."""
+    if not text:
+        return text
+    return (
+        text
+        .replace("\u00a0", " ")   # non-breaking space
+        .replace("\u2007", " ")   # figure space
+        .replace("\u202f", " ")   # narrow no-break space
+    )
+
 
 def extract_code_blocks(content: str) -> List[str]:
     """Extract all code blocks from content"""
@@ -107,8 +118,12 @@ def convert_trajectory_to_messages(trajectory: Dict, original_problem: Dict = No
         if role == "user":
             # For user message, use the problem title and description from the dataset
             # NOT the prompt that was sent to the model
-            problem_title = trajectory.get("problem_title", "")
-            problem_description = original_problem.get("description", "") if original_problem else ""
+            # problem_title = trajectory.get("problem_title", "")
+            # problem_description = original_problem.get("description", "") if original_problem else ""
+
+            # normalize the white spaces
+            problem_title = normalize_whitespace(trajectory.get("problem_title", ""))
+            problem_description = normalize_whitespace(original_problem.get("description", "") if original_problem else "")
             
             # If we don't have the original description, try to extract from content
             if not problem_description:
