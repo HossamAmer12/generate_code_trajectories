@@ -8,7 +8,7 @@ input_file = './processed_trajectories/trajectories_messages.jsonl'
 output_file = './processed_trajectories/one_example.json'
 
 # Set an example index
-example_index = 12
+example_index = 4
 
 try:
     with open(input_file, 'r', encoding='utf-8') as f:

@@ -749,7 +749,7 @@ def main():
     # Configuration
     INPUT_FILE = "./leetcode_trajectories/test_trajectories.jsonl"  # Can be .json or .jsonl
     OUTPUT_DIR = "./processed_trajectories/"
-    MAX_SAMPLES = 20
+    MAX_SAMPLES = 200
     MAX_TOOL_CALLS = 4
     
     print("="*60)
