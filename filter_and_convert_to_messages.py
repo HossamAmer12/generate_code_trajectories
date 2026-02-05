@@ -14,6 +14,7 @@ from typing import List, Dict, Tuple
 import pandas as pd
 from collections import defaultdict
 
+
 def normalize_whitespace(text: str) -> str:
     """Replace problematic Unicode whitespace with ASCII spaces."""
     if not text:
@@ -532,7 +533,7 @@ def main():
     # Configuration
     INPUT_FILE = "./leetcode_trajectories/test_trajectories.jsonl"  # Can be .json or .jsonl
     OUTPUT_DIR = "./processed_trajectories/"
-    MAX_SAMPLES = 1
+    MAX_SAMPLES = 3
     
     print("="*60)
     print("LeetCode Trajectories Processor")
