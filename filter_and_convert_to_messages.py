@@ -519,7 +519,8 @@ def process_trajectories(
     input_jsonl_path: str,
     output_dir: str = "./processed_trajectories/",
     load_originals: bool = True,
-    max_samples: int = 100
+    max_samples: int = 100,
+    MAX_TOOL_CALLS: int = 4,
 ):
     """
     Process trajectories from JSON/JSONL and convert to messages format.
@@ -581,6 +582,13 @@ def process_trajectories(
                 # Convert to messages format
                 messages_data = convert_trajectory_to_messages(trajectory, original_problem)
                 
+
+                # Skip the messages with too many tool calls
+                stats = messages_data.get('stats', {})
+                num_calls = stats.get('num_tool_calls', 0)
+                if num_calls > MAX_TOOL_CALLS:
+                    continue
+
                 # Update statistics
                 stats = messages_data.get('stats', {})
                 global_stats['total_tool_calls'] += stats.get('num_tool_calls', 0)
@@ -620,6 +628,7 @@ def process_trajectories(
                     'messages': messages_data['messages'],
                     'tools': messages_data['tools']
                 }
+                
                 
                 all_messages_data.append(messages_data_clean)
                 
@@ -737,7 +746,8 @@ def main():
     # Configuration
     INPUT_FILE = "./leetcode_trajectories/test_trajectories.jsonl"  # Can be .json or .jsonl
     OUTPUT_DIR = "./processed_trajectories/"
-    MAX_SAMPLES = 5
+    MAX_SAMPLES = 10
+    MAX_TOOL_CALLS = 4
     
     print("="*60)
     print("LeetCode Trajectories Processor")
@@ -758,7 +768,8 @@ def main():
         input_jsonl_path=INPUT_FILE,
         output_dir=OUTPUT_DIR,
         load_originals=True,
-        max_samples=MAX_SAMPLES
+        max_samples=MAX_SAMPLES,
+        MAX_TOOL_CALLS=MAX_TOOL_CALLS
     )
     
     print(f"\n✓ All done! Check {OUTPUT_DIR} for results.")
