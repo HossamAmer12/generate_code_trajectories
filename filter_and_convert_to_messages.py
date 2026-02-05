@@ -314,6 +314,7 @@ def split_by_python_code_blocks(content: str, stats: Dict) -> list[dict]:
             # Keep track of the number of empty outputs
             stats['num_empty_outputs'] = stats['num_empty_outputs'] + 1
         
+        error_outputs = []
         error_outputs = check_for_errors(output)
         if error_outputs:
             stats['has_errors'] = True
@@ -345,7 +346,8 @@ def split_by_python_code_blocks(content: str, stats: Dict) -> list[dict]:
             "output": None
         })
 
-    return chunks, stats, error_outputs
+    # return chunks, stats, error_outputs
+    return chunks, stats
 
 
 def convert_trajectory_to_messages(trajectory: Dict, original_problem: Dict = None) -> Dict:
@@ -368,9 +370,11 @@ def convert_trajectory_to_messages(trajectory: Dict, original_problem: Dict = No
         'num_untagged_code_blocks': 0,
         'has_errors': False,
         'used_original_response': False,
-        'num_fixes': 0
+        'num_fixes': 0,
+        'cur_diff': original_problem['difficulty']
     }
     
+
     # Process conversation turns
     for turn_idx, turn_data in enumerate(trajectory.get("conversation", [])):
         role = turn_data.get("role")
@@ -412,8 +416,9 @@ def convert_trajectory_to_messages(trajectory: Dict, original_problem: Dict = No
             stats['num_fixes'] += num_fixes
             
 
-            # split_by_python_code_blocks
-            chunks, stats, error_outputs = split_by_python_code_blocks(fixed_content, stats)
+            # split_by_python_code_blocks # error outputs need to be for every chunk
+            # chunks, stats, error_outputs = split_by_python_code_blocks(fixed_content, stats)
+            chunks, stats = split_by_python_code_blocks(fixed_content, stats)
                 
             tool_calls = []
             output_tool_calls = []
@@ -504,7 +509,8 @@ def load_original_problems(dataset_name: str = "newfacade/LeetCodeDataset",
             problems_lookup[task_id] = {
                 'original_response': item.get('response', ''),
                 'description': item.get('problem_description', ''),
-                'task_id': task_id
+                'task_id': task_id,
+                'difficulty': item.get('difficulty', '')
             }
         
         print(f"Loaded {len(problems_lookup)} original problems for lookup")
@@ -552,7 +558,8 @@ def process_trajectories(
         'total_fixes': 0,
         'tool_calls_distribution': defaultdict(int),
         'errors_by_problem': [],
-        'untagged_code_problems': []
+        'untagged_code_problems': [],
+        'difficulty_distribution': defaultdict(int),
     }
     
     # Process trajectories
@@ -591,6 +598,10 @@ def process_trajectories(
                 
                 # Update total problems to be total problems processed
                 global_stats['total_problems'] += 1
+
+                # Track difficulty
+                difficulty = original_problem.get('difficulty', 'Unknown')
+                global_stats['difficulty_distribution'][difficulty] += 1
 
                 # Update statistics
                 stats = messages_data.get('stats', {})
@@ -714,7 +725,15 @@ def process_trajectories(
         count = global_stats['tool_calls_distribution'][num_calls]
         percent = 100.0* global_stats['tool_calls_distribution'][num_calls] / global_stats['total_problems']
         bar = "█" * int(percent / 2)
-        print(f"  {num_calls} tool calls: {count} problems ({percent:.2f})% {bar}")
+        print(f"  {num_calls} tool calls: {count} problems ({percent:.2f}%) {bar}")
+
+
+    print("\nDifficutly Distribution:")
+    for level in sorted(global_stats['difficulty_distribution'].keys()):
+        count = global_stats['difficulty_distribution'][level]
+        percent = 100.0* count / global_stats['total_problems']
+        bar = "█" * int(percent / 2)
+        print(f"  {level}: {count} problems ({percent:.2f}%) {bar}")
     
     
     if global_stats['problems_with_errors'] > 0:
@@ -735,7 +754,7 @@ def process_trajectories(
         # Convert defaultdict to regular dict for JSON serialization
         stats_to_save = {
             **global_stats,
-            'tool_calls_distribution': dict(global_stats['tool_calls_distribution'])
+            'tool_calls_distribution': dict(global_stats['tool_calls_distribution']),
         }
         json.dump(stats_to_save, f, indent=2, ensure_ascii=False)
     print(f"✓ Saved statistics to: {stats_path}")
