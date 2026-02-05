@@ -43,11 +43,103 @@ for response in agent.run(messages=messages):
             
 
 # Extract assistant's response
-generated_code = responses[-1][-1]['content']
+# generated_code = responses[-1][-1]['content']
 
-match = re.search(r"```python\s*(.*?)\s*```", generated_code, re.DOTALL)
-generated_code = match.group(1) if match else None
+# generated_code = ()
+# match = re.search(r"```python\s*(.*?)\s*```", generated_code, re.DOTALL)
+# generated_code = match.group(1) if match else None
 
+
+# code_str = """# Final solution
+# def solve_problem(n: int, queries: List[List[int]]) -> List[int]:
+#     def dijkstra(graph, start, end):
+#         distances = [float('inf')] * n
+#         distances[start] = 0
+#         priority_queue = [(0, start)]
+
+#         while priority_queue:
+#             current_distance, current_node = heapq.heappop(priority_queue)
+
+#             if current_distance > distances[current_node]:
+#                 continue
+
+#             for neighbor, weight in graph[current_node]:
+#                 distance = current_distance + weight
+
+#                 if distance < distances[neighbor]:
+#                     distances[neighbor] = distance
+#                     heapq.heappush(priority_queue, (distance, neighbor))
+
+#         return distances[end]
+
+#     # Initialize the graph with the default roads
+#     graph = {i: [(i + 1, 1)] for i in range(n - 1)}
+#     graph[n - 1] = []  # The last city has no outgoing roads
+
+#     # Process each query
+#     results = []
+#     for u, v in queries:
+#         if u not in graph:
+#             graph[u] = []
+#         graph[u].append((v, 1))
+#         results.append(dijkstra(graph, 0, n - 1))
+
+#     return results
+
+
+# # Test cases
+# print(solve_problem(5, [[2, 4], [0, 2], [0, 4]]))  # Output: [3, 2, 1]
+# print(solve_problem(4, [[0, 3], [0, 2]]))  # Output: [1, 1]
+# """
+
+code_str = """from typing import List
+import heapq
+
+# Final solution
+def solve_problem(n: int, queries: List[List[int]]) -> List[int]:
+    def dijkstra(graph, start, end):
+        distances = [float('inf')] * n
+        distances[start] = 0
+        priority_queue = [(0, start)]
+
+        while priority_queue:
+            current_distance, current_node = heapq.heappop(priority_queue)
+
+            if current_distance > distances[current_node]:
+                continue
+
+            for neighbor, weight in graph[current_node]:
+                distance = current_distance + weight
+
+                if distance < distances[neighbor]:
+                    distances[neighbor] = distance
+                    heapq.heappush(priority_queue, (distance, neighbor))
+
+        return distances[end]
+
+    # Initialize the graph with the default roads
+    graph = {i: [(i + 1, 1)] for i in range(n - 1)}
+    graph[n - 1] = []  # The last city has no outgoing roads
+
+    # Process each query
+    results = []
+    for u, v in queries:
+        if u not in graph:
+            graph[u] = []
+        graph[u].append((v, 1))
+        results.append(dijkstra(graph, 0, n - 1))
+
+    return results
+
+
+# Test cases
+print(solve_problem(5, [[2, 4], [0, 2], [0, 4]]))  # Output: [3, 2, 1]
+print(solve_problem(4, [[0, 3], [0, 2]]))  # Output: [1, 1]
+"""
+
+
+# Debug
+generated_code = code_str
 
 print("Generated Code:")
 print(generated_code)

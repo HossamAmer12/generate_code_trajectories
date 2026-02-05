@@ -12,6 +12,9 @@ import time
 import re
 import textwrap
 import requests
+import datetime
+import traceback
+
 
 # Install required packages if needed
 def install_requirements():
@@ -48,6 +51,20 @@ CODE_BLOCK_RE = re.compile(
 )
 
 
+def log_execution(code, output, log_file = "code_exec.txt"):
+    timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    with open(log_file, "a", encoding="utf-8") as f:
+        f.write("=" * 60 + "\n")
+        f.write(f"[{timestamp}] Executed Code Block\n")
+        f.write("-" * 60 + "\n")
+        f.write("CODE:\n")
+        f.write("```python\n")
+        f.write(code + "\n")
+        f.write("```\n\n")
+        f.write("OUTPUT:\n")
+        f.write(output + "\n")
+        f.write("=" * 60 + "\n\n")
+
 def execute_code_blocks(text, timeout=5):
     """
     Finds <code> blocks, executes them, and injects <interpreter> output.
@@ -68,9 +85,13 @@ def execute_code_blocks(text, timeout=5):
             sandbox_result = sandbox_response.json()
             output = sandbox_result.get("run_result", {}).get("stdout", "").strip()
             output = output.strip("\n")
-        except:
-            output = "ERROR: Execution timed out"
+        except Exception as e:
+            output = "ERROR:\n" + traceback.format_exc()
         
+        # debug
+        # 🔒 Log code + output together
+        log_execution(generated_code, output)
+
         return match.group(0) + f"\n<interpreter>\n{output}\n</interpreter>\n"
         
     print("****************************Blocks: ")
@@ -171,7 +192,7 @@ class LeetCodeTrajectoryGenerator:
                 }
 
 
-                if problem['original_response'] == "Unknown":
+                if problem['original_response'] == "Unknown" or problem["original_response"] == "":
                     continue
 
                 problems.append(problem)
@@ -493,6 +514,7 @@ class LeetCodeTrajectoryGenerator:
     - Wrap each code snippet as: <code>\n```python\nYOUR_CODE_HERE\n```\n</code>
     - Each code block should be COMPLETE and EXECUTABLE (include imports)
     - Use print() for all outputs you want to see
+    - Include all necessary imports and define all variables.
     - Code blocks should appear 2-4 times during your thinking process
     - Execution results will be wrapped in <interpreter> tags
 
@@ -733,18 +755,21 @@ class LeetCodeTrajectoryGenerator:
             print(f"Problem {i}/{len(problems)}")
             print(f"{'#'*60}")
             
+            # Leave this part for debugging
             # debug
-            if problem["title"] != "shortest-distance-after-road-addition-queries-ii":
-                trajectory = {
-                "problem_id": problem.get("id", "unknown"),
-                "problem_title": problem["title"],
-                "difficulty": problem.get("difficulty", "Unknown"),
-                "conversation": [],
-                # "final_solution": current_python_code,
-                "success": False
-            }
-            else:
-                trajectory = self.generate_trajectory(problem)
+            # if problem["title"] != "shortest-distance-after-road-addition-queries-ii":
+            #     trajectory = {
+            #     "problem_id": problem.get("id", "unknown"),
+            #     "problem_title": problem["title"],
+            #     "difficulty": problem.get("difficulty", "Unknown"),
+            #     "conversation": [],
+            #     # "final_solution": current_python_code,
+            #     "success": False
+            # }
+            # else:
+            #     trajectory = self.generate_trajectory(problem)
+
+            trajectory = self.generate_trajectory(problem)
 
             trajectories.append(trajectory)
             
