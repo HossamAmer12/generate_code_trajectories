@@ -10,6 +10,8 @@ from pathlib import Path
 from typing import List, Dict
 import time
 import re
+import textwrap
+import requests
 
 # Install required packages if needed
 def install_requirements():
@@ -35,6 +37,44 @@ def install_requirements():
 from qwen_agent.agents import Assistant
 from qwen_agent.llm import get_chat_model
 
+
+# ------------------------------
+# Code execution utility
+# ------------------------------
+
+CODE_BLOCK_RE = re.compile(
+    r"```(?:python)?\s*(.*?)```",
+    re.DOTALL | re.IGNORECASE
+)
+
+
+def execute_code_blocks(text, timeout=5):
+    """
+    Finds <code> blocks, executes them, and injects <interpreter> output.
+    """
+    def run_block(match):
+        generated_code = textwrap.dedent(match.group(1)).strip()
+        print("Executing raw code:\n", generated_code)
+
+        try:
+            # 🔥 send `code` to sandbox here
+            sandbox_payload = {"code": generated_code,
+            "language": "python"}
+
+            sandbox_response = requests.post(
+                "http://localhost:8080/run_code",  # Your sandbox endpoint
+                headers={"Content-Type": "application/json"},
+                json=sandbox_payload)
+            sandbox_result = sandbox_response.json()
+            output = sandbox_result.get("run_result", {}).get("stdout", "").strip()
+            output = output.strip("\n")
+        except:
+            output = "ERROR: Execution timed out"
+        
+        return match.group(0) + f"\n<interpreter>\n{output}\n</interpreter>\n"
+        
+    print("****************************Blocks: ")
+    return CODE_BLOCK_RE.sub(run_block, text)
 
 class LeetCodeTrajectoryGenerator:
     """Generate trajectories for LeetCode problems using Qwen-Agent with local model"""
@@ -454,6 +494,11 @@ class LeetCodeTrajectoryGenerator:
             
             # Extract assistant's response
             assistant_response = responses[-1][-1]['content']
+
+            # Execute code blocks
+            assistant_response = execute_code_blocks(assistant_response)
+
+            print("Hossam after exectution", assistant_response)
 
             if assistant_response:
                 trajectory["conversation"].append({
