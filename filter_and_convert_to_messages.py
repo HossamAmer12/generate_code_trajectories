@@ -310,6 +310,9 @@ def split_by_python_code_blocks(content: str, stats: Dict) -> list[dict]:
             ):
                 output = code
                 stats['num_fixes'] += 1
+        else:
+            # Keep track of the number of empty outputs
+            stats['num_empty_outputs'] = stats['num_empty_outputs'] + 1
         
         error_outputs = check_for_errors(output)
         if error_outputs:
@@ -734,7 +737,7 @@ def main():
     # Configuration
     INPUT_FILE = "./leetcode_trajectories/test_trajectories.jsonl"  # Can be .json or .jsonl
     OUTPUT_DIR = "./processed_trajectories/"
-    MAX_SAMPLES = 3
+    MAX_SAMPLES = 5
     
     print("="*60)
     print("LeetCode Trajectories Processor")
