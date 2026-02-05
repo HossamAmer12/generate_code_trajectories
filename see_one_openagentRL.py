@@ -7,14 +7,16 @@ import json
 input_file = './processed_trajectories/trajectories_messages.jsonl'
 output_file = './processed_trajectories/one_example.json'
 
+example_index = 0
 
 try:
     with open(input_file, 'r', encoding='utf-8') as f:
-        # 1. Read the first line
-        first_line = f.readline()
-        
-        # 2. Parse the string into a dictionary
-        data = json.loads(first_line)
+        for i, line in enumerate(f):
+            if i == example_index:
+                data = json.loads(line)
+                break
+        else:
+            raise IndexError("Index out of range")
 
     # 3. Save the dictionary as a standard JSON file
     with open(output_file, 'w', encoding='utf-8') as f:
