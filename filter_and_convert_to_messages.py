@@ -283,7 +283,8 @@ def load_original_problems(dataset_name: str = "newfacade/LeetCodeDataset",
 def process_trajectories(
     input_jsonl_path: str,
     output_dir: str = "./processed_trajectories/",
-    load_originals: bool = True
+    load_originals: bool = True,
+    max_samples: int = 100
 ):
     """
     Process trajectories from JSON/JSONL and convert to messages format.
@@ -330,6 +331,10 @@ def process_trajectories(
             if not line.strip():
                 continue
             
+            # Stop at maximum number of sample
+            if line_num > max_samples:
+                break
+                
             try:
                 trajectory = json.loads(line)
                 global_stats['total_problems'] += 1
@@ -497,6 +502,7 @@ def main():
     # Configuration
     INPUT_FILE = "./leetcode_trajectories/test_trajectories.jsonl"  # Can be .json or .jsonl
     OUTPUT_DIR = "./processed_trajectories/"
+    MAX_SAMPLES = 1
     
     print("="*60)
     print("LeetCode Trajectories Processor")
@@ -515,7 +521,8 @@ def main():
     messages_data, stats = process_trajectories(
         input_jsonl_path=INPUT_FILE,
         output_dir=OUTPUT_DIR,
-        load_originals=True
+        load_originals=True,
+        max_samples=MAX_SAMPLES
     )
     
     print(f"\n✓ All done! Check {OUTPUT_DIR} for results.")
