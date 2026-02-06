@@ -549,6 +549,49 @@ def load_original_problems(dataset_name: str = "newfacade/LeetCodeDataset",
         return {}
 
 
+def ensure_list_recursive(x):
+    """Recursively convert numpy arrays to Python lists"""
+    if hasattr(x, 'tolist'):
+        # It's a numpy array - convert it
+        result = x.tolist()
+        # Recursively process the converted list
+        if isinstance(result, list):
+            return [ensure_list_recursive(item) for item in result]
+        elif isinstance(result, dict):
+            return {k: ensure_list_recursive(v) for k, v in result.items()}
+        return result
+    elif isinstance(x, list):
+        # Already a list, but may contain numpy arrays in nested structures
+        return [ensure_list_recursive(item) for item in x]
+    elif isinstance(x, dict):
+        # Dict may contain numpy arrays in values
+        return {k: ensure_list_recursive(v) for k, v in x.items()}
+    return x
+
+# With this NEW CODE:
+def save_parquet_section(output_dir, all_messages_data):
+    """
+    This is the corrected section - paste this into your process_trajectories function
+    """
+    # Save as Parquet
+    parquet_output_path = os.path.join(output_dir, "trajectories_messages.parquet")
+    df = pd.DataFrame(all_messages_data)
+    
+    # CRITICAL FIX: Convert all numpy arrays to pure Python lists
+    # This ensures compatibility with the reference format and prevents
+    # "TypeError: unhashable type: 'numpy.ndarray'" errors
+    print("Converting numpy arrays to lists for parquet compatibility...")
+    df['messages'] = df['messages'].apply(ensure_list_recursive)
+    df['tools'] = df['tools'].apply(ensure_list_recursive)
+    
+    # Verify conversion
+    sample_msg = df['messages'].iloc[0] if len(df) > 0 else None
+    if sample_msg is not None:
+        print(f"  Verified: messages[0] is type {type(sample_msg)} (should be <class 'list'>)")
+    
+    df.to_parquet(parquet_output_path, engine='pyarrow', index=False)
+    print(f"✓ Saved Parquet to: {parquet_output_path}")
+
 def process_trajectories(
     input_jsonl_path: str,
     output_dir: str = "./processed_trajectories/",
@@ -703,10 +746,11 @@ def process_trajectories(
     print(f"✓ Saved JSONL to: {jsonl_output_path}")
     
     # Save as Parquet
-    parquet_output_path = os.path.join(output_dir, "trajectories_messages.parquet")
-    df = pd.DataFrame(all_messages_data)
-    df.to_parquet(parquet_output_path, engine='pyarrow', index=False)
-    print(f"✓ Saved Parquet to: {parquet_output_path}")
+    save_parquet_section(output_dir=output_dir, all_messages_data=all_messages_data)
+    # df = pd.DataFrame(all_messages_data)
+    # df.to_parquet(parquet_output_path, engine='pyarrow', index=False)
+    # print(f"✓ Saved Parquet to: {parquet_output_path}")
+
     
     # Save error log
     if error_log:
