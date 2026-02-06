@@ -1266,12 +1266,14 @@ def main():
     # Configuration
     # MODEL_NAME = "Qwen/Qwen2.5-1.5B-Instruct"  # Small model for testing
     # MODEL_NAME = "Qwen/Qwen3-1.7B"  # Small model for testing
-    MODEL_NAME = "Qwen/Qwen2.5-Coder-1.5B-Instruct"  # Small model for testing
+    # MODEL_NAME = "Qwen/Qwen2.5-Coder-1.5B-Instruct"  # Small model for testing
+
+    MODEL_NAME = "qwen3-30b-coder"  # big model for testing
     # MAX_SAMPLES = 10  # Number of problems to process
     # MAX_SAMPLES = 5  # Number of problems to process
-    # MAX_SAMPLES = 2  # Number of problems to process
+    MAX_SAMPLES = 2  # Number of problems to process
 
-    MAX_SAMPLES = 1500
+    # MAX_SAMPLES = 1500
     OUTPUT_DIR = "./leetcode_trajectories/"
     
     # clear the log file
