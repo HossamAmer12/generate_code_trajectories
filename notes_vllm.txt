@@ -1,0 +1,23 @@
+
+vllm serve Qwen/Qwen2.5-1.5B-Instruct \
+  --host 127.0.0.1 \
+  --port 8000
+
+vllm serve /home/hossamamer/qwen3-30b-coder --tensor-parallel-size 8 --max-model-len 8192 --gpu-memory-utilization 0.85 --swap-space 16 --dtype float16
+
+Leave this running
+
+curl http://127.0.0.1:8000/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "Qwen/Qwen2.5-1.5B-Instruct",
+    "messages":[{"role":"user","content":"Explain GRPO in one paragraph."}]
+  }' 
+
+curl http://127.0.0.1:8000/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "Qwen/Qwen2.5-1.5B-Instruct",
+    "messages":[{"role":"user","content":"Explain GRPO in one paragraph."}]
+  }' | jq -r '.choices[0].message.content'
+
