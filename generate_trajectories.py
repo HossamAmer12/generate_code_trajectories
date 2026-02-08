@@ -50,8 +50,15 @@ CODE_BLOCK_RE = re.compile(
     re.DOTALL | re.IGNORECASE
 )
 
+def normalize_output(text):
+    """Normalize output for comparison by removing extra whitespace"""
+    if not text:
+        return ""
+    return ' '.join(text.split())
 
-def log_execution(pre_text, code, output, log_file = "code_exec.txt"):
+
+def log_execution(pre_text, code, output, log_file="code_exec.txt"):
+    """Log code execution for debugging"""
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     with open(log_file, "a", encoding="utf-8") as f:
         f.write("=" * 60 + "\n")
@@ -69,41 +76,205 @@ def log_execution(pre_text, code, output, log_file = "code_exec.txt"):
         f.write(output + "\n")
         f.write("=" * 60 + "\n\n")
 
+
+def is_code_executable(code):
+    """
+    Check if code block is actually executable or just a definition/example.
+    Returns True if it can be executed standalone, False if it's just definitions.
+    """
+    lines = code.strip().split('\n')
+    
+    # Check if there are any actual execution statements (not just definitions/comments)
+    has_execution = False
+    for line in lines:
+        stripped = line.strip()
+        # Skip empty lines and comments
+        if not stripped or stripped.startswith('#'):
+            continue
+        # Skip class and function definitions (just the def/class line)
+        if stripped.startswith('def ') or stripped.startswith('class '):
+            continue
+        # Skip docstrings
+        if stripped.startswith('"""') or stripped.startswith("'''"):
+            continue
+        # If we find imports, assignments, or function calls, it's executable
+        if (not stripped.startswith('def ') and 
+            not stripped.startswith('class ') and
+            not stripped.startswith('@')):
+            has_execution = True
+            break
+    
+    return has_execution
+
+
+def extract_all_previous_definitions(text, current_pos):
+    """
+    Extract all class and function definitions from previous code blocks.
+    This allows later code blocks to reference previously defined functions.
+    """
+    # Find all previous code blocks
+    code_pattern = re.compile(
+        r'```(?:python)?\s*\n(.*?)```',
+        re.DOTALL | re.IGNORECASE
+    )
+    
+    definitions = []
+    
+    for match in code_pattern.finditer(text[:current_pos]):
+        code = match.group(1).strip()
+        
+        # Extract class and function definitions
+        lines = code.split('\n')
+        current_def = []
+        in_definition = False
+        indent_level = 0
+        
+        for line in lines:
+            stripped = line.strip()
+            
+            # Start of a new class or function definition
+            if stripped.startswith('class ') or stripped.startswith('def '):
+                if current_def:
+                    definitions.append('\n'.join(current_def))
+                current_def = [line]
+                in_definition = True
+                indent_level = len(line) - len(line.lstrip())
+            elif in_definition:
+                # Check if we're still in the definition
+                current_indent = len(line) - len(line.lstrip())
+                if line.strip() and current_indent <= indent_level and not line.strip().startswith('#'):
+                    # We've left the definition
+                    definitions.append('\n'.join(current_def))
+                    current_def = []
+                    in_definition = False
+                else:
+                    current_def.append(line)
+        
+        # Add last definition if exists
+        if current_def:
+            definitions.append('\n'.join(current_def))
+    
+    return '\n\n'.join(definitions)
+
+
 def execute_code_blocks(text, timeout=5, context_chars=1024):
     """
-    Finds <code> blocks, executes them, and injects <interpreter> output.
+    Finds code blocks and executes them, ensuring clean ```python...```<interpreter>...</interpreter> structure.
+    - Removes ALL <code> tags
+    - Only keeps ```python ``` format
+    - Handles code blocks that reference previous definitions
+    - Skips execution for definition-only blocks
+    - Removes duplicate/malformed interpreter tags
     """
-    def run_block(match):
-        generated_code = textwrap.dedent(match.group(1)).strip()
-        # print("Executing raw code:\n", generated_code)
-
-        # Extract context before this code block
-        start_index = match.start()
-        pre_text = text[max(0, start_index - context_chars):start_index].strip()
-
+    
+    # Step 1: Remove ALL <code> and </code> tags
+    text_cleaned = re.sub(r'</?code>\s*', '', text, flags=re.IGNORECASE)
+    
+    # Step 2: Remove ALL existing <interpreter> tags completely (both complete and incomplete)
+    # This is critical to avoid duplication
+    text_cleaned = re.sub(r'<interpreter>.*?</interpreter>', '', text_cleaned, flags=re.DOTALL)
+    # Also remove any orphaned opening <interpreter> tags
+    text_cleaned = re.sub(r'<interpreter>.*', '', text_cleaned, flags=re.DOTALL)
+    
+    # Step 3: Find all code blocks
+    code_pattern = re.compile(
+        r'```(?:python)?\s*\n(.*?)```',
+        re.DOTALL | re.IGNORECASE
+    )
+    
+    result_parts = []
+    last_end = 0
+    
+    for match in code_pattern.finditer(text_cleaned):
+        # Add text before this code block
+        result_parts.append(text_cleaned[last_end:match.start()])
+        
+        code_content = match.group(1).strip()
+        
+        # Check if this code block is executable
+        if not is_code_executable(code_content):
+            # This is just definitions, don't execute but keep the block
+            formatted_block = f"```python\n{code_content}\n```"
+            result_parts.append(formatted_block)
+            last_end = match.end()
+            continue
+        
+        # Get all previous definitions to prepend
+        previous_defs = extract_all_previous_definitions(text_cleaned, match.start())
+        
+        # Combine previous definitions with current code
+        if previous_defs:
+            executable_code = previous_defs + "\n\n" + code_content
+        else:
+            executable_code = code_content
+        
+        # Execute the code
+        generated_code = textwrap.dedent(executable_code).strip()
+        pre_text = text_cleaned[max(0, match.start() - context_chars):match.start()].strip()
+        
         try:
-            # 🔥 send `code` to sandbox here
-            sandbox_payload = {"code": generated_code,
-            "language": "python"}
-
+            sandbox_payload = {
+                "code": generated_code,
+                "language": "python"
+            }
+            
             sandbox_response = requests.post(
-                "http://localhost:8080/run_code",  # Your sandbox endpoint
+                "http://localhost:8080/run_code",
                 headers={"Content-Type": "application/json"},
-                json=sandbox_payload)
-            sandbox_result = sandbox_response.json()
-            output = sandbox_result.get("run_result", {}).get("stdout", "").strip()
-            output = output.strip("\n")
+                json=sandbox_payload,
+                timeout=timeout
+            )
+            
+            if sandbox_response.status_code != 200:
+                output = f"ERROR: Sandbox returned status {sandbox_response.status_code}"
+            else:
+                sandbox_result = sandbox_response.json()
+                output = sandbox_result.get("run_result", {}).get("stdout", "").strip()
+                
+                # Also check for stderr in case there are errors
+                stderr = sandbox_result.get("run_result", {}).get("stderr", "").strip()
+                if stderr:
+                    output = f"{output}\n{stderr}".strip() if output else stderr
+                    
+        except requests.exceptions.Timeout:
+            output = "ERROR: Code execution timed out"
         except Exception as e:
-            output = "ERROR:\n" + traceback.format_exc()
+            output = f"ERROR: {str(e)}\n{traceback.format_exc()}"
         
-        # debug
-        # 🔒 Log code + output together
-        log_execution(pre_text, generated_code, output)
-
-        return match.group(0) + f"\n<interpreter>\n{output}\n</interpreter>\n"
+        # Log execution (log the original code, not the one with prepended definitions)
+        log_execution(pre_text, code_content, output)
         
-    # print("****************************Blocks: ")
-    return CODE_BLOCK_RE.sub(run_block, text)
+        # Build properly formatted block
+        # Only include interpreter output if there's actual output
+        if output and output.strip():
+            formatted_block = (
+                f"```python\n"
+                f"{code_content}\n"
+                f"```\n"
+                f"<interpreter>\n"
+                f"{output}\n"
+                f"</interpreter>"
+            )
+        else:
+            # No output, just keep the code block without interpreter tags
+            formatted_block = f"```python\n{code_content}\n```"
+        
+        result_parts.append(formatted_block)
+        last_end = match.end()
+    
+    # Add remaining text
+    result_parts.append(text_cleaned[last_end:])
+    
+    final_text = ''.join(result_parts)
+    
+    # Step 4: Final cleanup - remove any remaining orphaned interpreter tags
+    # This catches any edge cases where interpreter tags might have slipped through
+    final_text = re.sub(r'<interpreter>(?!.*</interpreter>).*$', '', final_text, flags=re.DOTALL)
+    
+    # Step 5: Clean up any excessive newlines
+    final_text = re.sub(r'\n{3,}', '\n\n', final_text)
+    
+    return final_text
 
 class LeetCodeTrajectoryGenerator:
     """Generate trajectories for LeetCode problems using Qwen-Agent with local model"""
@@ -1271,9 +1442,9 @@ def main():
     MODEL_NAME = "qwen3-30b-coder"  # big model for testing
     # MAX_SAMPLES = 10  # Number of problems to process
     # MAX_SAMPLES = 5  # Number of problems to process
-    MAX_SAMPLES = 2  # Number of problems to process
+    # MAX_SAMPLES = 2  # Number of problems to process
 
-    # MAX_SAMPLES = 1500
+    MAX_SAMPLES = 1500
     OUTPUT_DIR = "./leetcode_trajectories/"
     
     # clear the log file

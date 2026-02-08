@@ -1,6 +1,7 @@
 
 # Generate
 # Takes about 4 hrs for 1500 examples
+time python generate_trajectories.py | tee teeto.txt
 
 # Filter and convert
 python filter_and_convert_to_messages.py 

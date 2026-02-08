@@ -282,26 +282,71 @@ def check_for_errors(interpreter_outputs: List[str]) -> List[str]:
 #         "stats": stats
 #     }
 
-
 CODE_BLOCK_RE = re.compile(
-    r"```python\s*\n(.*?)```"                 # python code block
-    r"(?:\s*<interpreter>\s*(.*?)\s*</interpreter>)?",  # optional output
+    r"```python\s*\n(.*?)```",  # python code block
     re.DOTALL
 )
 
-def split_by_python_code_blocks(content: str, stats: Dict) -> list[dict]:
+INTERPRETER_RE = re.compile(
+    r"<interpreter>\s*(.*?)\s*</interpreter>",  # interpreter output
+    re.DOTALL
+)
+
+def split_by_python_code_blocks(content: str, stats: Dict) -> Tuple[list[dict], Dict]:
+    """
+    Split content into chunks of: text, code, output pattern.
+    
+    Returns list of chunks where each chunk has:
+    - text: content before the code block (with all tags removed)
+    - code: the python code (if exists)
+    - output: the interpreter output (if exists)
+    """
     chunks = []
+    
+    # First, remove ALL <code> and </code> tags from content
+    content = re.sub(r'</?code>\s*', '', content)
+    
+    # Find all code blocks and interpreter outputs
+    code_matches = list(CODE_BLOCK_RE.finditer(content))
+    interpreter_matches = list(INTERPRETER_RE.finditer(content))
+    
+    # Match code blocks with their corresponding outputs
     pos = 0
-
-    for match in CODE_BLOCK_RE.finditer(content):
-        start, end = match.span()
-        code = match.group(1).strip()
-        output = match.group(2)
-        output = output.strip() if output is not None else None
-
-        # Fix empty interpreter outputs if code looks like output
-        if output is None or output == "":
-            # Simple heuristic to guess if code block is actually output
+    
+    for code_idx, code_match in enumerate(code_matches):
+        code_start, code_end = code_match.span()
+        code = code_match.group(1).strip()
+        
+        # Text before this code block
+        text = content[pos:code_start].strip()
+        
+        # Remove any interpreter tags from this text segment
+        text = INTERPRETER_RE.sub('', text).strip()
+        
+        # Find the corresponding interpreter output (if any)
+        output = None
+        output_end = code_end
+        
+        # Look for interpreter tag immediately after this code block
+        for interp_match in interpreter_matches:
+            interp_start, interp_end = interp_match.span()
+            # Check if this interpreter output comes right after the code block
+            # Allow some whitespace between them
+            text_between = content[code_end:interp_start].strip()
+            if not text_between or text_between == '':
+                output = interp_match.group(1).strip()
+                output_end = interp_end
+                break
+        
+        # Check for errors in output
+        if output:
+            error_outputs = check_for_errors([output])
+            if error_outputs:
+                stats['has_errors'] = True
+                stats['num_error_outputs'] += 1
+        else:
+            stats['num_empty_outputs'] += 1
+            # Fix empty interpreter outputs if code looks like output
             if code and (
                 len(code) < 100 or 
                 re.match(r'^\[.*\]$', code) or
@@ -310,45 +355,28 @@ def split_by_python_code_blocks(content: str, stats: Dict) -> list[dict]:
             ):
                 output = code
                 stats['num_fixes'] += 1
-        else:
-            # Keep track of the number of empty outputs
-            stats['num_empty_outputs'] = stats['num_empty_outputs'] + 1
         
-        error_outputs = []
-        error_outputs = check_for_errors(output)
-        if error_outputs:
-            stats['has_errors'] = True
-            stats['num_error_outputs'] += 1
-            # Error recovery:
-            # print(f"  ⚠️  Using original response due to errors in: {trajectory.get('problem_title')}")
-            #     fixed_content = original_problem['original_response']
-            #     all_code_blocks = extract_code_blocks(fixed_content)
-            #     interpreter_outputs = extract_interpreter_outputs(fixed_content)
-            #     stats['used_original_response'] = True
-
-        # Text before this code block
-        text = content[pos:start].strip()
-
         chunks.append({
             "text": text,
             "code": code,
             "output": output
         })
-
-        pos = end
-
+        
+        pos = output_end
+    
     # Trailing text after the last code block
     trailing_text = content[pos:].strip()
+    # Remove any remaining interpreter tags
+    trailing_text = INTERPRETER_RE.sub('', trailing_text).strip()
+    
     if trailing_text:
         chunks.append({
             "text": trailing_text,
             "code": None,
             "output": None
         })
-
-    # return chunks, stats, error_outputs
+    
     return chunks, stats
-
 
 def convert_trajectory_to_messages(trajectory: Dict, original_problem: Dict = None) -> Dict:
     """
@@ -371,35 +399,25 @@ def convert_trajectory_to_messages(trajectory: Dict, original_problem: Dict = No
         'has_errors': False,
         'used_original_response': False,
         'num_fixes': 0,
-        'cur_diff': original_problem['difficulty']
+        'cur_diff': original_problem.get('difficulty', 'Unknown') if original_problem else 'Unknown'
     }
     
-   
-
     # Process conversation turns
     for turn_idx, turn_data in enumerate(trajectory.get("conversation", [])):
         role = turn_data.get("role")
         content = turn_data.get("content", "")
         
         if role == "user":
-            # For user message, use the problem title and description from the dataset
-            # NOT the prompt that was sent to the model
-            # problem_title = trajectory.get("problem_title", "")
-            # problem_description = original_problem.get("description", "") if original_problem else ""
-
             # normalize the white spaces
             problem_title       = normalize_whitespace(trajectory.get("problem_title", ""))
             problem_description = normalize_whitespace(original_problem.get("description", "") if original_problem else "")
             
             # If we don't have the original description, try to extract from content
             if not problem_description:
-                # The content might have the problem description in it
-                # Try to extract just the problem part (before all the instructions)
                 user_question_match = re.search(r'USER QUESTION:\s*(.*?)\s*(?:ORIGINAL THINKING PROCESS|$)', content, re.DOTALL)
                 if user_question_match:
                     problem_description = user_question_match.group(1).strip()
                 else:
-                    # Fall back to using content as-is
                     problem_description = content
             
             # Format user message with title and description
@@ -412,77 +430,72 @@ def convert_trajectory_to_messages(trajectory: Dict, original_problem: Dict = No
             })
         
         elif role == "assistant":
-            # First, fix empty interpreter outputs
-            fixed_content, num_fixes = fix_empty_interpreter_outputs(content)
-            stats['num_fixes'] += num_fixes
+            # Check if this is the last turn
+            is_last_turn = (turn_idx == len(trajectory.get("conversation", [])) - 1)
             
-
-            # split_by_python_code_blocks # error outputs need to be for every chunk
-            # chunks, stats, error_outputs = split_by_python_code_blocks(fixed_content, stats)
-            chunks, stats = split_by_python_code_blocks(fixed_content, stats)
-                
+            # Get the final solution
+            final_solution = original_problem.get("final_solution", "") if original_problem else ""
+            
+            # Split content by code blocks
+            chunks, stats = split_by_python_code_blocks(content, stats)
+            
             tool_calls = []
             output_tool_calls = []
 
-            is_last_turn = (turn_idx == len(trajectory.get("conversation", [])) - 1)
-            # Get the final solution
-            final_solution = original_problem.get("final_solution", "")
-            if is_last_turn and final_solution:
-                final_code = final_solution.strip()
-                final_code = "\n# Final code implementation\n" + final_code
-                # final_code = "\n# BIEN BIEN\n" + final_code
-
             for idx, chunk in enumerate(chunks):
-                
-                # Prepare the assistant text
                 text_content = chunk["text"] or ""
-
-                # print("Hossam is_last_turn: ", is_last_turn, idx == len(chunks) - 1, len(final_code))
+                
                 # If this is the last chunk in the last turn, append the final solution
-                if is_last_turn and idx == len(chunks) - 1 and final_code:
-                    text_content += final_code
-                    # print("Hossam appended text content")
-                    # print(text_content)
-
-                if chunk["text"] and chunk["code"]:
-                    current_tool_call = {"function": {
+                is_last_chunk = (idx == len(chunks) - 1)
+                if is_last_turn and is_last_chunk and final_solution:
+                    text_content += f"\n\n# Final code implementation\n{final_solution}"
+                
+                if chunk["code"]:
+                    # This chunk has code, create a tool call
+                    current_tool_call = {
+                        "function": {
                             "arguments": {"code": chunk["code"]},
-                            "name": "code_interpreter"}, "type": "function"}
+                            "name": "code_interpreter"
+                        }, 
+                        "type": "function"
+                    }
                     tool_calls.append(current_tool_call)
+                    
+                    # Add assistant message with text (before code) and tool call
                     messages.append({
                         "role": "assistant",
                         "content": text_content,
                         "tool_calls": [current_tool_call]
                     })
 
-                    # Define the output
-                    output = chunk["output"]
+                    # If there's output, add tool result
+                    if chunk["output"] is not None:
+                        output = chunk["output"]
+                        # Format the result to match expected structure
+                        if output.strip():
+                            formatted_result = f"stdout:\n\n```\n{output}\n```"
+                        else:
+                            formatted_result = "stdout:\n\n```\n\n```"
+                        
+                        messages.append({
+                            "role": "tool",
+                            "content": formatted_result,
+                            "tool_calls": None
+                        })
+                        output_tool_calls.append(formatted_result)
 
-                    # Format the result to match expected structure
-                    if output.strip():
-                        formatted_result = f"stdout:\n\n```\n{output}\n```"
-                    else:
-                        formatted_result = "stdout:\n\n```\n\n```"
-                    messages.append({
-                        "role": "tool",
-                        "content": formatted_result,
-                        "tool_calls": None
-                    })
-
-                    output_tool_calls.append(formatted_result)
-
-                elif chunk["text"]:
-                    messages.append({
-                        "role": "assistant",
-                        "content": text_content,
-                        "tool_calls": None
-                    })
-                    
+                else:
+                    # This chunk has only text, no code
+                    if text_content:  # Only add if there's actual content
+                        messages.append({
+                            "role": "assistant",
+                            "content": text_content,
+                            "tool_calls": None
+                        })
             
             stats['num_tool_calls'] = len(tool_calls)
             stats['num_tool_results'] = len(output_tool_calls)
-        
-           
+    
     # Define the tools structure
     tools = [{
         "function": {
@@ -511,7 +524,6 @@ def convert_trajectory_to_messages(trajectory: Dict, original_problem: Dict = No
         "final_solution": trajectory.get("final_solution"),
         "stats": stats
     }
-
 
 def load_original_problems(dataset_name: str = "newfacade/LeetCodeDataset", 
                           split: str = "train", 
@@ -842,6 +854,7 @@ def main():
     INPUT_FILE     = "./leetcode_trajectories/test_trajectories.jsonl"  # Can be .json or .jsonl
     OUTPUT_DIR     = "./processed_trajectories/"
     MAX_SAMPLES    = 200
+    # MAX_SAMPLES    = 10
     MAX_TOOL_CALLS = 4
     
     print("="*60)
