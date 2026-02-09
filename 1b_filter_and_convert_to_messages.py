@@ -846,8 +846,8 @@ def main():
     """Main execution function"""
     
     # Configuration
-    INPUT_FILE     = "./leetcode_trajectories/test_trajectories.jsonl"  # Can be .json or .jsonl
-    OUTPUT_DIR     = "./processed_trajectories/"
+    INPUT_FILE     = "./leetcode_trajectories_1b/test_trajectories.jsonl"  # Can be .json or .jsonl
+    OUTPUT_DIR     = "./processed_trajectories_1b/"
     # MAX_SAMPLES    = 200
     MAX_SAMPLES    = 2
     MAX_TOOL_CALLS = 4
